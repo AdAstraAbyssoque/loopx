@@ -350,20 +350,34 @@ export class FileAuthorityStore implements AuthorityStore {
         if (this.existingOnly && current === null) {
           return { status: "failed", reason_code: "existing_authority_missing", reason: "existing-only store cannot bootstrap a missing authority" };
         }
+        // Content-aware idempotency: same operation_id with matching {events, receipts}
+        // returns the original receipt (retry-after-crash); the check must precede
+        // the revision gate so a stuck writer can't block the already-committed replay.
+        // A different body with the same operation_id remains a conflict.
+        const existing = current?.receipt(normalized.operation_id);
+        if (existing) {
+          const intendedBody = { events: normalized.events, receipts: normalized.receipts };
+          const existingBody = { events: existing.events, receipts: existing.receipts };
+          if (canonicalAuthorityBytes(intendedBody).equals(canonicalAuthorityBytes(existingBody))) {
+            return {
+              status: "applied",
+              provider_revision: existing.provider_revision,
+              cursor: existing.cursor,
+            };
+          }
+          return {
+            status: "conflict",
+            conflict_kind: "operation_id_exists",
+            current_provider_revision: current.provider_revision,
+            current_cursor: current.cursor,
+          };
+        }
         if ((current?.provider_revision ?? null) !== normalized.expected_provider_revision) {
           return {
             status: "conflict",
             conflict_kind: "provider_revision_mismatch",
             current_provider_revision: current?.provider_revision ?? null,
             current_cursor: current?.cursor ?? null,
-          };
-        }
-        if (current?.receipt(normalized.operation_id)) {
-          return {
-            status: "conflict",
-            conflict_kind: "operation_id_exists",
-            current_provider_revision: current.provider_revision,
-            current_cursor: current.cursor,
           };
         }
         const document = FileAuthorityJournal.append(current, this.goalId, identity, normalized, (previous, transaction) =>

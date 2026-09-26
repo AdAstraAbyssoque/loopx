@@ -467,10 +467,26 @@ export class SqliteAuthorityStore implements AuthorityStore {
       const cursor = current?.state.cursor ?? null;
       const revision = current?.provider_revision ?? null;
       let conflict: "provider_revision_mismatch" | "operation_id_exists" | null = null;
-      if (revision !== normalized.expected_provider_revision) conflict = "provider_revision_mismatch";
-      else if (db.prepare("SELECT 1 FROM commits WHERE operation_id = ?").get(normalized.operation_id)) {
+      // Content-aware idempotency: same operation_id with matching body (via
+      // commit_digest) returns the original receipt; the check precedes the
+      // revision gate so an already-committed replay is never blocked.
+      const existingRow = db.prepare("SELECT cursor, operation_id, commit_digest FROM commits WHERE operation_id = ?").get(normalized.operation_id);
+      if (existingRow) {
+        const existingCursorValue = existingRow.cursor;
+        if (existingCursorValue === null || typeof existingCursorValue !== "number" && typeof existingCursorValue !== "bigint") {
+          db.exec("ROLLBACK"); transactionOpen = false;
+          return {status: "failed", reason_code: "provider_protocol_violation", reason: "corrupt cursor in commits"};
+        }
+        const existingCursor = BigInt(existingCursorValue);
+        const identity = current?.identity ?? this.identity(db);
+        const digest = commitDigest(identity, existingCursor, normalized.operation_id, normalized.next_projection, normalized.events, normalized.receipts);
+        if (digest === existingRow.commit_digest) {
+          db.exec("ROLLBACK"); transactionOpen = false;
+          return {status: "applied", provider_revision: `${identity}:${existingCursor}`, cursor: existingCursor.toString()};
+        }
         conflict = "operation_id_exists";
       }
+      if (!conflict && revision !== normalized.expected_provider_revision) conflict = "provider_revision_mismatch";
       if (conflict) {
         db.exec("ROLLBACK"); transactionOpen = false;
         return {status: "conflict", conflict_kind: conflict, current_provider_revision: revision,

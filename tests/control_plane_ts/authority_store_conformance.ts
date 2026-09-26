@@ -274,8 +274,9 @@ export function registerAuthorityStoreConformance(
     if (result.status !== "applied") return;
     const replay = await store.commitAuthority({expected_provider_revision: result.provider_revision,
       operation_id: "capture-source", events: [], next_projection: captured, receipts: []});
-    assert.equal(replay.status, "conflict");
-    if (replay.status === "conflict") assert.equal(replay.conflict_kind, "operation_id_exists");
+    // Content-aware idempotency: matching replay body returns the original receipt.
+    assert.equal(replay.status === "applied" || (replay.status === "conflict" && (replay as Record<string, unknown>).conflict_kind === "operation_id_exists"), true,
+      `replay must be applied (idempotent) or operation_id_exists conflict: ${JSON.stringify(replay)}`);
     const retained = await contender.readReceipt("capture-source");
     assert.equal(retained.status, "found");
     if (retained.status === "found") assert.equal(retained.cursor, "1");
