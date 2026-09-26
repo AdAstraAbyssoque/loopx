@@ -5,6 +5,13 @@ import {restoreAuthorityArchive} from "../../loopx/control_plane/coordination/au
 import type {AuthorityStore} from "../../loopx/control_plane/coordination/authority_store.ts";
 const [archive, target, digest, kind, stopAt] = process.argv.slice(2);
 const store = kind === "sqlite" ? new SqliteAuthorityStore(target, "goal") : new FileAuthorityStore(target, "goal");
+// Hold the IPC channel across the durable boundary. A pending promise alone
+// leaves the event loop empty, so the child exits 13 ("unfinished top-level
+// await") before the parent can deliver SIGKILL. The message listener pins the
+// channel, the same barrier the task-lease crash worker uses.
+let resume: () => void = () => {};
+const crashBarrier = new Promise<void>(resolve => {resume = resolve;});
+process.on("message", () => resume());
 const interrupted: AuthorityStore = {
   providerKind: store.providerKind,
   storeIdentity: () => store.storeIdentity(), loadAuthority: () => store.loadAuthority(),
@@ -13,8 +20,8 @@ const interrupted: AuthorityStore = {
     const committed = await store.commitAuthority(request);
     if (committed.status === "applied" && committed.cursor === stopAt) {
       process.send!({status: "durable", cursor: committed.cursor});
-      // IPC keeps the worker alive until the parent sends SIGKILL.
-      await new Promise<never>(() => {});
+      // The parent requires the named crash boundary and signals SIGKILL here.
+      await crashBarrier;
     }
     return committed;
   },

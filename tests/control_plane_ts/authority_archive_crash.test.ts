@@ -10,6 +10,11 @@ import {SqliteAuthorityStore} from "../../loopx/control_plane/coordination/sqlit
 import {exportAuthorityArchive, restoreAuthorityArchive} from "../../loopx/control_plane/coordination/authority_archive.ts";
 import {auditAuthorityArchive} from "../../loopx/control_plane/coordination/authority_archive_audit.ts";
 
+// The worker must survive the durable boundary until this late SIGKILL. An
+// immediate signal hides a worker that already exited 13 ("unfinished
+// top-level await") because its IPC channel stopped holding the event loop.
+const crashSignalDelayMs = 250;
+
 for (const provider of ["file", "sqlite"] as const) {
   test(`${provider}: killed after checkpoint commit; reopen, resume, audit and continue CAS`, {timeout: 60000}, async () => {
     const root = await mkdtemp(join(tmpdir(), "archive-crash-"));
@@ -38,7 +43,8 @@ for (const provider of ["file", "sqlite"] as const) {
       const ended = once(worker, "exit");
       const notification = await Promise.race([boundary, ended.then(() => { throw new Error(`worker exited before crash: ${stderr}`); })]);
       assert.deepEqual(notification[0], {status: "durable", cursor: "65"});
-      worker.kill("SIGKILL");
+      await new Promise(resolve => setTimeout(resolve, crashSignalDelayMs));
+      assert.equal(worker.kill("SIGKILL"), true, "the crash worker was still alive to receive SIGKILL");
       const exit = await ended;
       assert.equal(exit[1], "SIGKILL");
       const reopened = provider === "sqlite" ? new SqliteAuthorityStore(destination, "goal", {existingOnly: true})
