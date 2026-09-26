@@ -595,6 +595,29 @@ Target an ingress receipt within two seconds on a healthy local service, indepen
 
 Use existing service recovery and receipt pumps. No manager-specific business automation for each kind of request. Expose configuration and failures through the existing CLI, capability settings and manager conversation. Troubleshooting distinguishes model failure, tool/policy denial, state conflict, unreachable receiver and transport formatting/delivery failure.
 
+**Accepted queue preparation failures (S1/S10, A12/A22/A23):** an accepted
+request owns a terminal outcome even before an adapter starts. A missing runtime
+asset, invalid workspace or failed session restoration must settle the affected
+queued Turn through the shared Chat lifecycle and release its claim. Waiting for
+an answer must observe that durable failure promptly, rather than wait for the
+model timeout while leaving runnable work behind. Keep the original typed
+provider failure where available; unexpected local preparation errors use
+`runtime_unavailable`, with private diagnostics retained locally. Cancellation
+and an already terminal result win over a late preparation error. Restoring the
+runtime must not replay a failed request; the same ingress identity returns the
+same failure, while a fresh explicit request can run after repair.
+
+The bounded Python queue repair uses the existing store's fenced failure and
+claim-release operations for all queue callers; Lark only translates the typed
+outcome. It does not create a separate manager scheduler or new TS authority.
+The TS turn-driver migration must preserve this pre-dispatch failure matrix
+alongside accepted-request recovery. Validate with a removed-release fixture,
+multiple queued requests, a stop race, same-identity redelivery and a fresh
+request after recovery. These qualify the preparation boundary, not successful
+owner selection, receiver adoption or the complete A24 journey. Operational
+recovery must also verify the service's actual installed release: a healthy HTTP
+listener alone does not prove its lazy-loaded runtime assets still exist.
+
 ## 11. Normative delivery plan
 
 Implement coherent end-to-end slices, not one PR per incidental field. The manager engineering owner maintains canonical Todos and a private incident-to-acceptance map; PRs link this RFC milestone and acceptance IDs. Public progress updates contain only safe results. Milestone completion requires current deployment evidence, not merged PR count.
