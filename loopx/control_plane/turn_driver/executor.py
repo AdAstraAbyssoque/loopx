@@ -28,7 +28,7 @@ from .command_validation import (
 )
 from .driver import selected_turn_todo
 from .execution_readback import execution_payload
-from .host_process import run_host_process
+from .host_process_transport import run_host_process
 from .host_binding import (
     managed_executor_unavailable_payload,
 )

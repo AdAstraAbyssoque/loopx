@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from loopx.control_plane.turn_driver.executor import _run_host
-from loopx.control_plane.turn_driver.host_process import (
+from loopx.control_plane.turn_driver.host_process_transport import (
     HostOutputLines,
     run_host_process,
 )
@@ -91,7 +91,7 @@ while True:
 """
     launcher = f"""
 from pathlib import Path
-from loopx.control_plane.turn_driver.host_process import run_host_process
+from loopx.control_plane.turn_driver.host_process_transport import run_host_process
 run_host_process({[sys.executable, "-c", host]!r}, project=Path({str(tmp_path)!r}), input_text='', timeout_seconds=30)
 """
     owner = subprocess.Popen(
@@ -153,7 +153,7 @@ while True:
 
 
 def test_windows_transport_relay_preserves_argv_and_stdin(tmp_path: Path) -> None:
-    from loopx.control_plane.turn_driver.host_process import _WINDOWS_COMMAND_RELAY
+    from loopx.control_plane.turn_driver.host_process_transport import _WINDOWS_COMMAND_RELAY
 
     # The relay is tested here on any OS; real .cmd resolution remains a Windows
     # integration obligation. All args stay argv entries, not interpolated code.

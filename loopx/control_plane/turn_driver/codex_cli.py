@@ -25,7 +25,7 @@ from .executor import (
 )
 from .execution_profile import require_supported_reasoning_effort
 from .host_failure import BuiltInHostError
-from .host_process import HostOutputLines, run_host_process
+from .host_process_transport import HostOutputLines, run_host_process
 from .transaction import LOOPX_TURN_RESULT_SCHEMA_VERSION, TRANSACTION_PHASES
 
 
