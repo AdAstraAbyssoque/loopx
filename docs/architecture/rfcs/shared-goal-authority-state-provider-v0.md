@@ -24,16 +24,15 @@
   [Chinese version](./shared-goal-authority-state-provider-v0.zh-CN.md) and this
   English version are semantic mirrors. A difference between them is a defect.
 
-## Current delivery frontier (2026-09-25)
+## Current delivery frontier (2026-09-27)
 
-Audit `37bbaec79` and current PR states: complete-source transport, transaction
-capture, source assembly and the five previously open caller/event fixes are
-merged, not future implementation. After the current promotion-admission repair,
-three named code boundaries remain planned: external-effect execution fencing;
-event-writer binding plus whole-Goal migration/rollback; default onboarding plus
-bounded Python retirement. #4931 and outstanding D2 evidence are tracked
-separately. Three is a delivery plan, not a guaranteed total PR count.
-[Current inventory and exits](ledger/shared-goal-authority-state-provider-v0/2026-09-24-default-cutover-reconciliation.md).
+Shipped capture, pagination, File format upgrade and Python prototype retirement
+are not future work. Managed Host supervision replaces the duplicated Python
+process lifecycles; authority-bound execution remains open. The current plan
+has four new deliveries including this one, three afterwards; integration of
+#5140/#5054/#4931 and D1–D3 evidence are separate. The old three architectural
+packages are not a decrementing PR counter.
+[Named plan, changed estimate and boundaries](ledger/shared-goal-authority-state-provider-v0/2026-09-27-host-supervision.md).
 
 File retained-state storage now reuses the existing TS checkpoint/delta codec,
 stacked on #5063's verified read cache and RPC budgets. Original revisions,

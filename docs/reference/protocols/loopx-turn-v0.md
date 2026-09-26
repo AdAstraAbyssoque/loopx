@@ -253,6 +253,48 @@ dedicated typed result channel; passing `trae chat` directly as the adapter is
 not sufficient. Check the installed CLI's help and pin the qualified command
 shape because flags and headless behavior may vary by version.
 
+### Managed Host Process Lifetime
+
+The generic command executor and built-in Codex CLI adapter now share a TS
+process supervisor. Existing `turn run-once` commands need no new option. Node
+uses the same supported-version discovery as the control-plane runtime; the
+private request stream is limited to 8 MiB and is not a durable protocol.
+
+A Host leader exiting, its output pipes closing and its descendants stopping
+are distinct observations. On POSIX, LoopX starts a dedicated process group,
+sends TERM and escalates to KILL after 300 ms, **including when the leader has
+already exited**. Normal result return also cleans up leftover group members.
+Host commands must not use that group to launch intended persistent services.
+Windows retains Python command-launch compatibility (including batch entrypoints)
+through a transport-only relay, then attempts tree termination before killing
+the leader. Windows uses best-effort process-tree cleanup; this delivery does not claim
+POSIX-equivalent cancellation or Windows qualification.
+
+Timeout, output-consumer failure and loss of the owning Python process trigger
+cleanup. The control pipe remains open for the job lifetime; EOF cancels work.
+After leader exit, output drain is bounded (normally two seconds), rather than
+waiting indefinitely for inherited pipes. Generic stdout is capped at its
+existing 12,000-byte result budget while streaming. Codex output is consumed
+transiently with LF-framed records capped at 1,048,576 characters and a finite
+set of failure categories; an oversized record makes diagnostic observation
+incomplete. UTF-8 characters split across byte chunks remain intact. Raw Host
+output is not written to LoopX state.
+
+Generic results require complete output and zero exit status. Codex retains its
+existing separate typed result-file contract: incomplete diagnostics do not
+invent a failure category, and a validated result file remains usable. Timeout
+still preserves the observed opaque session for the existing retry path. No
+process observation certifies Todo completion, refunds spend or rolls back an
+external effect; independent validation and settlement keep their owners.
+
+This is **process supervision, not execution authority or a sandbox**. It does
+not renew provider leases, prevent stale remote side effects, cancel attached
+App sessions, or supervise in-process DSH execution. Descendants that escape the
+process group and killing the supervisor itself with SIGKILL are outside this
+boundary. Caller death can precede cleanup; the local lane lock alone cannot
+certify no overlap with a replacement executor. Authority-bound renewal,
+revocation and uncertain-effect recovery remain a separate delivery.
+
 ### Repeatable Codex CLI Qualification
 
 The repository includes an opt-in end-to-end qualification that creates an
