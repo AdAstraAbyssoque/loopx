@@ -227,6 +227,24 @@ def test_turn_checkpoint_wrapper_retains_original_scope_and_source(tmp_path):
     ) == expected
 
 
+def test_new_corpus_does_not_expand_an_existing_surface_without_owner_binding(tmp_path):
+    from loopx.capabilities.reward_memory import build_reward_memory_surface_read_authority_checkpoints
+
+    config, _, _ = context(tmp_path, two_corpora=True)
+    overlay = config["corpora"].pop("overlay")
+    config["surfaces"][SURFACE]["corpus_ids"] = ["primary"]
+    before = build_reward_memory_surface_read_authority_checkpoints(
+        config, SURFACE, verified=True, source_ref="policy:original:review")
+    config["corpora"]["overlay"] = overlay
+    assert build_reward_memory_surface_read_authority_checkpoints(
+        config, SURFACE, verified=True, source_ref="policy:original:review") == before
+    config["surfaces"][SURFACE]["corpus_ids"].append("overlay")
+    after = build_reward_memory_surface_read_authority_checkpoints(
+        config, SURFACE, verified=False, source_ref="policy:original:review")
+    assert list(after) == ["primary", "overlay"]
+    assert all(checkpoint["verified"] is False for checkpoint in after.values())
+
+
 @pytest.mark.parametrize("age", [True, -1, 0.5, "1"])
 def test_invalid_age_is_not_coerced_even_with_a_missing_checkpoint(tmp_path, age):
     config, arguments, records = context(tmp_path)

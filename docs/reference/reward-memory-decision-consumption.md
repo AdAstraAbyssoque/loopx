@@ -59,6 +59,18 @@ wrapper uses this same projection and retains its verified registry source.
 False 不会升级为 True；不推断授权来源、不启用能力、不调用 provider。原 Turn wrapper
 复用该投影并保留 registry 来源。不要以生成了 checkpoint 为由宣称授权核验已完成。
 
+Checkpoint transport failure remains optional-enrichment failure: managed Turn
+admission returns its existing fail-open `runtime_unavailable` packet. The explicit
+`agent-turn-recall --execute` CLI returns a safe `runtime_unavailable` packet and
+exit code 2. Neither path calls the provider or writes a successful same-Turn
+receipt when checkpoint construction fails; a later healthy retry uses the same
+Turn identity. These zero-call guarantees apply before provider invocation only.
+
+checkpoint 传输失败不成为普通 Turn 的新门禁：managed 准入沿用原 fail-open
+`runtime_unavailable`；显式 CLI 返回安全的同类 packet 和退出码 2。构建失败时
+均不调用 provider、不写成功的同 Turn 回执；恢复后沿用原 Turn 身份重试。
+零调用保证仅适用于 provider 调用前的构建失败，不覆盖调用后的异常。
+
 If computing age from timestamps, first reject an observation in the future;
 then round elapsed seconds upward to an integer. Never clamp a negative age,
 refresh the original observation time, or change policy to make recall pass.
