@@ -553,8 +553,15 @@ function planPreparedAcceptance(
   requestSha256: Sha256,
 ): ChatTurnAcceptancePlan {
   const capsule = turn.acceptance;
-  if (
-    capsule === null ||
+  if (capsule === null) {
+    return rejected("durable_state_conflict");
+  }
+  const terminal = TERMINAL_TURN_STATUSES.has(turn.status);
+  if (terminal) {
+    if (facts.preparedTurn.kind !== "absent") {
+      return rejected("durable_state_conflict");
+    }
+  } else if (
     turn.status !== "queued" ||
     facts.preparedTurn.kind !== "single" ||
     facts.preparedTurn.turnId !== turn.turnId ||
@@ -574,9 +581,11 @@ function planPreparedAcceptance(
   if (requestSha256 !== capsule.requestSha256) {
     return rejected("request_conflict");
   }
-  const blockingTurnId = activeTurnBlocks(facts.activeTurn, turn.turnId);
-  if (blockingTurnId !== null) {
-    return rejected("active_turn_conflict", blockingTurnId);
+  if (!terminal) {
+    const blockingTurnId = activeTurnBlocks(facts.activeTurn, turn.turnId);
+    if (blockingTurnId !== null) {
+      return rejected("active_turn_conflict", blockingTurnId);
+    }
   }
   if (facts.transcript.kind === "ambiguous") {
     return rejected("durable_state_conflict");
@@ -605,6 +614,7 @@ function planPreparedAcceptance(
   const sessionOwnsPreparedTurn =
     session.status === "busy" && session.activeTurnId === turn.turnId;
   if (
+    !terminal &&
     (
       facts.transcript.kind === "single" ||
       facts.queuedEvent.kind === "single"
@@ -626,12 +636,14 @@ function planPreparedAcceptance(
     requestSha256,
     writes: {
       prepare_turn: false,
-      activate_session: !sessionOwnsPreparedTurn,
+      activate_session: !terminal && !sessionOwnsPreparedTurn,
       append_message: facts.transcript.kind === "absent",
       append_queued_event: facts.queuedEvent.kind === "absent",
       settle_turn: true,
     },
-    dispatch: {kind: "required"},
+    dispatch: terminal
+      ? {kind: "not_required", reason: "terminal"}
+      : {kind: "required"},
   });
 }
 

@@ -908,6 +908,10 @@ class ChatRuntimeController:
                 origin="web",
             )
         with self._session_adapter_lock(session_id):
+            session = self.store.load_session(session_id)
+            if session is None or session.get("status") == "closed":
+                raise KeyError("chat session was not found")
+            self._check_codex_home(session)
             if loopx_execution and session.get("loopx_tools") is not True:
                 session = self.loopx_mode.activate_tools(session, work_dir=work_dir, objective=objective)
             accepted = self.store.accept_managed_turn(
@@ -1270,21 +1274,37 @@ class ChatRuntimeController:
     def _fail_queue_preparation(
         self, session_id: str, turn_id: str, error: Exception,
     ) -> None:
+        key = (session_id, turn_id)
+        done_event = threading.Event()
+        with self.lock:
+            current = self.turn_done_events.get(key)
+            owns_done_event = current is None
+            if owns_done_event:
+                self.turn_done_events[key] = done_event
+            else:
+                done_event = current
         logging.getLogger(__name__).error(
             "Chat queue runtime preparation failed",
             exc_info=(type(error), error, error.__traceback__),
         )
-        self._fail_turn(
-            session_id, turn_id,
-            error.error_code if isinstance(error, CodexChatAgentError) else "runtime_unavailable",
-            str(error) if isinstance(error, CodexChatAgentError) else (
-                "The Agent runtime could not be prepared. Check the runtime installation "
-                "and configuration, then retry."
-            ),
-            status="failed",
-            gate=error.gate if isinstance(error, CodexChatAgentError) else None,
-            expected_statuses={"queued", "starting", "running"},
-        )
+        try:
+            self._fail_turn(
+                session_id, turn_id,
+                error.error_code if isinstance(error, CodexChatAgentError) else "runtime_unavailable",
+                str(error) if isinstance(error, CodexChatAgentError) else (
+                    "The Agent runtime could not be prepared. Check the runtime installation "
+                    "and configuration, then retry."
+                ),
+                status="failed",
+                gate=error.gate if isinstance(error, CodexChatAgentError) else None,
+                expected_statuses={"queued", "starting", "running"},
+            )
+        finally:
+            done_event.set()
+            if owns_done_event:
+                with self.lock:
+                    if self.turn_done_events.get(key) is done_event:
+                        self.turn_done_events.pop(key, None)
 
     def _run_turn(
         self,
@@ -1545,32 +1565,49 @@ class ChatRuntimeController:
         )
 
     def interrupt_turn(self, *, session_id: str, turn_id: str) -> dict[str, Any]:
-        turn = self.store.load_turn(session_id, turn_id)
-        if turn is None:
-            raise KeyError("chat turn was not found")
-        if turn.get("status") in TERMINAL_TURN_STATES:
-            return turn
-        session = self.store.load_session(session_id)
-        if (
-            session
-            and session.get("session_mode") == CHAT_SESSION_MODE_ATTACHED
-            and session.get("active_turn_id") == turn_id
-        ):
-            raise CodexChatAgentError(
-                "The attached host does not expose interrupt control to LoopX Chat.",
-                error_code="attached_session_interrupt_unavailable",
-                gate={
-                    "kind": "host_tool_gate",
-                    "summary": "The active Turn is owned by the attached host.",
-                    "next_action": "Stop the Turn in the attached host, then retry.",
-                },
+        with self._session_adapter_lock(session_id):
+            turn = self.store.load_turn(session_id, turn_id)
+            if turn is None:
+                raise KeyError("chat turn was not found")
+            session = self.store.load_session(session_id)
+            if (
+                session
+                and session.get("session_mode") == CHAT_SESSION_MODE_ATTACHED
+                and session.get("active_turn_id") == turn_id
+            ):
+                raise CodexChatAgentError(
+                    "The attached host does not expose interrupt control to LoopX Chat.",
+                    error_code="attached_session_interrupt_unavailable",
+                    gate={
+                        "kind": "host_tool_gate",
+                        "summary": "The active Turn is owned by the attached host.",
+                        "next_action": "Stop the Turn in the attached host, then retry.",
+                    },
+                )
+            prepared = self.store.prepared_managed_turn_request(
+                session_id,
+                turn_id=turn_id,
             )
-        interrupting = self.store.update_turn(
-            session_id,
-            turn_id,
-            expected_statuses={"queued", "starting", "running"},
-            status="interrupting",
-        )
+            if prepared is not None:
+                accepted = self.store.accept_managed_turn(
+                    session_id,
+                    client_turn_id=str(prepared["client_turn_id"]),
+                    message=str(prepared["message"]),
+                    attachments=prepared.get("attachments"),
+                    origin=str(prepared["origin"]),
+                    display_message=str(prepared["display_message"]),
+                    loopx_execution=bool(prepared["loopx_execution"]),
+                    loopx_request=prepared.get("loopx_request"),
+                )
+                turn = accepted.turn
+            if turn.get("status") in TERMINAL_TURN_STATES:
+                return turn
+            interrupting = self.store.update_turn(
+                session_id,
+                turn_id,
+                expected_statuses={"queued", "starting", "running"},
+                status="interrupting",
+            )
         if interrupting is None:
             current = self.store.load_turn(session_id, turn_id)
             if current is None:
@@ -1646,12 +1683,18 @@ class ChatRuntimeController:
         while True:
             if (turn := self.store.load_turn(session_id, turn_id)) is None:
                 raise KeyError("chat turn was not found")
-            if turn.get("status") in TERMINAL_TURN_STATES:
-                return turn
-            if (remaining := deadline - time.monotonic()) <= 0:
-                raise TimeoutError("chat turn wait timed out")
             with self.lock:
                 done_event = self.turn_done_events.get((session_id, turn_id))
+            remaining = deadline - time.monotonic()
+            if turn.get("status") in TERMINAL_TURN_STATES:
+                if done_event is None or done_event.is_set():
+                    return turn
+                if remaining <= 0:
+                    raise TimeoutError("chat turn wait timed out")
+                done_event.wait(remaining)
+                continue
+            if remaining <= 0:
+                raise TimeoutError("chat turn wait timed out")
             (done_event.wait if done_event else time.sleep)(remaining if done_event else min(0.02, remaining))
 
     def close_session(self, session_id: str) -> bool:

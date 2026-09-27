@@ -364,10 +364,12 @@ def test_legacy_turn_without_original_message_still_fails_closed(
         "settle_turn",
     ],
 )
+@pytest.mark.parametrize("interrupt_before_retry", [False, True])
 def test_managed_acceptance_repairs_every_durable_prefix(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     boundary: str,
+    interrupt_before_retry: bool,
 ) -> None:
     store = ChatSessionStore(tmp_path)
     session_id = str(
@@ -455,6 +457,54 @@ def test_managed_acceptance_repairs_every_durable_prefix(
     assert failed
 
     restarted = ChatSessionStore(tmp_path)
+    if interrupt_before_retry:
+        partial_turn = restarted.turn_for_client(
+            session_id,
+            "fault-request",
+        )
+        assert partial_turn is not None
+        runtime = ChatRuntimeController(
+            store=restarted,
+            codex_bin="missing-codex",
+        )
+        interrupted = runtime.interrupt_turn(
+            session_id=session_id,
+            turn_id=str(partial_turn["turn_id"]),
+        )
+        assert interrupted["status"] == "interrupted"
+        assert "_acceptance" not in interrupted
+
+        replay = restarted.accept_managed_turn(
+            session_id,
+            client_turn_id="fault-request",
+            message="recover this request",
+            attachments=[
+                {"id": "image-one", "mime_type": "image/png"},
+            ],
+        )
+        assert replay.created is False
+        assert replay.turn["status"] == "interrupted"
+        assert replay.dispatch_required is False
+        assert replay.dispatch_reason == "terminal"
+
+        next_turn, created = restarted.create_turn(
+            session_id,
+            client_turn_id="next-request",
+            message="continue after interruption",
+        )
+        assert created is True
+        assert next_turn["status"] == "queued"
+        assert restarted.load_session(session_id)["active_turn_id"] == next_turn["turn_id"]  # type: ignore[index]
+        assert [
+            message["text"]
+            for message in restarted.messages(session_id)
+            if (
+                message["role"] == "user"
+                and message["turn_id"] == interrupted["turn_id"]
+            )
+        ] == ["recover this request"]
+        return
+
     partial = restarted.session_snapshot(session_id)
     if partial["active_turn"] is not None:
         assert "_acceptance" not in partial["active_turn"]

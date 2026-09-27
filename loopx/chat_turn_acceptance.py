@@ -13,6 +13,7 @@ from .control_plane.effect_runtime import effect_runtime_result
 CHAT_TURN_ACCEPTANCE_REQUEST_SCHEMA = "loopx_chat_turn_acceptance_request_v0"
 CHAT_TURN_ACCEPTANCE_RESULT_SCHEMA = "loopx_chat_turn_acceptance_result_v0"
 CHAT_TURN_ACCEPTANCE_CAPSULE_SCHEMA = "loopx_chat_turn_acceptance_v0"
+TERMINAL_TURN_STATUSES = {"completed", "interrupted", "timed_out", "failed"}
 
 
 def _sha256(value: str) -> str:
@@ -112,7 +113,14 @@ def _queued_event_facts(events: list[dict[str, Any]]) -> dict[str, Any]:
 def _prepared_turn_facts(
     turns: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    prepared = [turn for turn in turns if "_acceptance" in turn]
+    prepared = [
+        turn
+        for turn in turns
+        if (
+            "_acceptance" in turn
+            and turn.get("status") not in TERMINAL_TURN_STATUSES
+        )
+    ]
     if len(prepared) != 1:
         return {"count": len(prepared)}
     return {

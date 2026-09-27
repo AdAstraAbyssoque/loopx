@@ -129,6 +129,25 @@ function settledPacket(status: string) {
   };
 }
 
+function terminalPreparedPacket(options: {
+  transcript?: "absent" | "single";
+  queuedEvent?: "absent" | "single";
+} = {}) {
+  const input = preparedPacket({
+    transcript: options.transcript,
+    queuedEvent: options.queuedEvent,
+    active: false,
+  });
+  return {
+    ...input,
+    matching_turn: {
+      ...input.matching_turn,
+      status: "interrupted",
+    },
+    prepared_turn: {count: 0},
+  };
+}
+
 test("a new request receives one complete acceptance plan", () => {
   const result = planChatTurnAcceptance(packet());
 
@@ -196,6 +215,59 @@ for (const testCase of [
     assert.equal(result.created, false);
     assert.deepEqual(result.writes, testCase.expected);
     assert.deepEqual(result.dispatch, {kind: "required"});
+  });
+}
+
+for (const testCase of [
+  {
+    name: "prepared Turn only",
+    input: terminalPreparedPacket(),
+    expected: {
+      prepare_turn: false,
+      activate_session: false,
+      append_message: true,
+      append_queued_event: true,
+      settle_turn: true,
+    },
+  },
+  {
+    name: "terminal Turn and transcript",
+    input: terminalPreparedPacket({transcript: "single"}),
+    expected: {
+      prepare_turn: false,
+      activate_session: false,
+      append_message: false,
+      append_queued_event: true,
+      settle_turn: true,
+    },
+  },
+  {
+    name: "complete terminal durable prefix",
+    input: terminalPreparedPacket({
+      transcript: "single",
+      queuedEvent: "single",
+    }),
+    expected: {
+      prepare_turn: false,
+      activate_session: false,
+      append_message: false,
+      append_queued_event: false,
+      settle_turn: true,
+    },
+  },
+]) {
+  test(`an exact retry retires ${testCase.name} without dispatch`, () => {
+    const result = planChatTurnAcceptance(testCase.input);
+
+    assert.equal(result.kind, "accepted");
+    if (result.kind !== "accepted") return;
+    assert.equal(result.disposition, "repaired");
+    assert.equal(result.created, false);
+    assert.deepEqual(result.writes, testCase.expected);
+    assert.deepEqual(result.dispatch, {
+      kind: "not_required",
+      reason: "terminal",
+    });
   });
 }
 

@@ -80,7 +80,7 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     try:
-        lines = path.read_text(encoding="utf-8").split("\n")
+        lines = path.read_bytes().split(b"\n")
     except OSError:
         return []
     rows: list[dict[str, Any]] = []
@@ -626,8 +626,15 @@ class ChatSessionStore(ChatIngressStore):
     def prepared_managed_turn_request(
         self,
         session_id: str,
+        *,
+        turn_id: str | None = None,
     ) -> dict[str, Any] | None:
         session_token = _opaque_id(session_id, field="session_id")
+        turn_token = (
+            _opaque_id(turn_id, field="turn_id")
+            if turn_id is not None
+            else None
+        )
         session_path = self._session_path(session_token)
         with self._session_lock(session_token):
             with exclusive_file_lock(
@@ -644,6 +651,17 @@ class ChatSessionStore(ChatIngressStore):
                         payload := _read_json(path)
                     ).get("schema_version") == CHAT_TURN_SCHEMA_VERSION
                     and "_acceptance" in payload
+                    and (
+                        (
+                            turn_token is not None
+                            and payload.get("turn_id") == turn_token
+                        )
+                        or (
+                            turn_token is None
+                            and payload.get("status")
+                            not in TERMINAL_TURN_STATES
+                        )
+                    )
                 ]
                 if not prepared:
                     return None
