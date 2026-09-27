@@ -11,6 +11,15 @@ from .control_plane.work_items.replan_history_codec import (
 
 from .control_plane import compact_control_plane_policy
 from .control_plane.effect_runtime import effect_runtime_request_scope
+from .control_plane.status.adapter_status_vocabulary import (
+    CONNECTED_ADAPTER_STATUSES as CONNECTED_ADAPTER_STATUSES,
+    CONNECTED_DELIVERY_ADAPTER_STATUSES as CONNECTED_DELIVERY_ADAPTER_STATUSES,
+)
+# Refs #4447: one definition for this vocabulary. Both status projections pass the
+# same two sets into the same injected parameters of the attention and lifecycle
+# read models, so the owner is the control-plane status package and this facade
+# keeps exporting the established names for existing callers as identity aliases
+# instead of restating the values.
 from .control_plane.status.collection import (
     StatusCollectionContext,
     collect_status as _collect_status_read_model,
@@ -254,6 +263,12 @@ _PUBLIC_COMPAT_REEXPORTS = {
     "STATUS_CONTRACT_RELOAD_HINT": "loopx.control_plane.status.contract_projection",
     "STATE_EVENT_LOG_BASENAME": "loopx.control_plane.status.active_state_projection",
     "PLANNED_CONTROLLER_OPT_IN_RECOMMENDED_ACTION": "loopx.control_plane.status.goal_attention_projection",
+    # Refs #4447: the connected-adapter sets were defined here and in both status
+    # projections that pass them to the same injected read-model parameters. The
+    # status package now owns each set once; the facade keeps exporting the
+    # established names for callers that reach them as attributes of `loopx.status`.
+    "CONNECTED_ADAPTER_STATUSES": "loopx.control_plane.status.adapter_status_vocabulary",
+    "CONNECTED_DELIVERY_ADAPTER_STATUSES": "loopx.control_plane.status.adapter_status_vocabulary",
 }
 
 
@@ -304,14 +319,6 @@ EVENT_LEDGER_EVIDENCE_HINTS = (
 )
 
 
-CONNECTED_ADAPTER_STATUSES = {
-    "connected",
-    "connected-read-only",
-    "pre-tick-runnable",
-}
-CONNECTED_DELIVERY_ADAPTER_STATUSES = {
-    "connected-delivery",
-}
 RUN_COMPACT_FIELDS = RUN_BASE_COMPACT_FIELDS
 LIFECYCLE_PRIORITY = (
     "controller_ready",
