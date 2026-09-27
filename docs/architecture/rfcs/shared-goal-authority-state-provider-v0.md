@@ -1205,15 +1205,22 @@ Keep live-state size fixed when isolating history growth, then grow live state
 separately. No goal-wide unbounded list of completed Todos or receipts may be
 hidden inside the supposedly fixed live projection.
 
-For the current `FileAuthorityStore`, a fixed projection of P bytes retained in
-each of N transactions costs approximately P*N final history bytes and
-P*N*(N+1)/2 cumulative document-publication bytes, before head, event, receipt,
-and envelope overhead. Normal reads also decode and validate the full chain.
-With P=15 KiB, the renewal-only case gives about **534 GiB** of cumulative
-publication at day 10 and **4.69 TiB** at day 30. The former 380 MiB estimate was
-only N*P at day 30, not the cumulative rewrite of retained projections. These
-are analytical payload estimates, not physical SSD writes or measured latency;
-growing receipt indexes inside every projection can make the model worse.
+The original full-projection File journal retained approximately P*N payload
+bytes and republished approximately P*N*(N+1)/2 bytes across N commits. That
+historical model must not be applied to the current checkpoint/delta format:
+#5102 retired that layout from ordinary reads and writes.
+
+The current File provider retains a checkpoint every 64 commits plus deltas,
+events and original receipts in one envelope. Its approximate retained bytes
+are `H(N) = ceil(N/64)*P + sum(delta/event/receipt/metadata bytes)`, before the
+live head and envelope overhead. Each commit still durably replaces the whole
+envelope, so cumulative application publication is `sum(H(n))`. Warm reads
+read/hash the envelope and may reuse its verified view; cold reads reconstruct
+and verify the history. SQLite instead updates transactional indexed rows and
+bounded checkpoint windows. These mechanisms motivate a matched experiment;
+neither a formula nor a cache hit establishes a short-term default choice.
+Report application publication separately from physical disk writes, and
+compare current code on equal state, history, durability and cold/warm workload.
 
 #### Preferred local direction and compatibility boundary
 
@@ -3201,7 +3208,16 @@ Qualify **one** long-lived local default profile. SQLite is the current D2
 candidate; File remains the real reference/explicit profile and migration
 rehearsal backend. Do not publish two ambiguous defaults, declare the current
 File history layout long-horizon-qualified, or silently fall back from a
-selected SQLite store. The final profile decision must cite its D2 evidence.
+selected SQLite store. Release activation must cite its D2 evidence. The September 27 matched
+short-history experiments also select SQLite as the **short-term default
+implementation target**: mutation/restart costs beat current checkpoint/delta
+File, while warm read tradeoffs depend on the projection. PR #4931 now shares
+privately owned TS replay between SQLite proofs and provider-neutral archive
+recovery, retaining exact byte proofs and isolating returned rows. Matched
+Linux evidence reduces many-field receipt/scan p95 by 88%/68%, but large-state
+budgets and sustained-memory qualification remain open. This is not permission
+to enable the default now.
+[Measurements, reproduction and D2/D3/L9 dependencies](../../reference/sqlite-authority-store.md#short-term-default-decision-and-matched-experiment).
 PostgreSQL shares the TS semantic contracts but has independent service,
 tenant, restore and capacity qualification; its deployment must not delay the
 local profile's work.
