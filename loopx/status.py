@@ -60,6 +60,10 @@ from .history import STATUS_NEUTRAL_CLASSIFICATIONS as HISTORY_STATUS_NEUTRAL_CL
 from .interface_budget import interface_budget_cadence_for_runs
 from .long_task_cadence import build_long_task_cadence_hint
 from .orchestration import compact_orchestration_policy
+from .capabilities.multi_subagent.native_child_receipts import (
+    latest_native_child_activity,
+    load_native_child_activity,
+)
 from .paths import resolve_runtime_root
 from .control_plane.work_items.task_graph import (
     build_task_graph_projection as _build_task_graph_projection_read_model,
@@ -90,7 +94,6 @@ from .control_plane.goals.active_state_metadata import (
     parse_state_frontmatter,
 )
 from .control_plane.todos.active_state_todos import (
-    MONITOR_WRITEBACK_CONTRACT_SCHEMA_VERSION as _MONITOR_WRITEBACK_CONTRACT_SCHEMA_VERSION,
     active_state_todo_fields as _active_state_todo_fields_read_model,
 )
 from .control_plane.todos.active_state_todo_parser import (
@@ -271,7 +274,6 @@ MONITOR_DISPLAY_SCHEMA_VERSION = "monitor_quiet_display_v0"
 STATUS_CONTRACT_SCHEMA_VERSION = 2
 MINIMUM_DASHBOARD_STATUS_CONTRACT_SCHEMA_VERSION = 2
 STATUS_CONTRACT_SIGNAL_LIMIT = 3
-MONITOR_WRITEBACK_CONTRACT_SCHEMA_VERSION = _MONITOR_WRITEBACK_CONTRACT_SCHEMA_VERSION
 EVENT_LEDGER_DECISION_CLASSIFICATIONS = USER_OR_CONTROLLER_CLASSIFICATIONS | {
     "operator_gate_approved",
 }
@@ -360,33 +362,8 @@ AUTONOMOUS_RUN_HISTORY_NEUTRAL_CLASSIFICATIONS = (
 
 
 
-def state_event_log_candidates(goal: dict[str, Any], *, state_path: Path) -> list[Path]:
-    from .control_plane.status.active_state_projection import (
-        state_event_log_candidates as _state_event_log_candidates,
-    )
-
-    return _state_event_log_candidates(goal, state_path=state_path)
 
 
-def active_state_event_projection_fields(
-    goal: dict[str, Any],
-    *,
-    state_path: Path,
-    preferred_todo_ids: set[str] | None = None,
-    rollout_events: list[dict[str, Any]] | None = None,
-    item_limit: int | None = MAX_STATUS_TODOS_PER_ROLE,
-) -> dict[str, Any]:
-    from .control_plane.status.active_state_projection import (
-        active_state_event_projection_fields as _active_state_event_projection_fields,
-    )
-
-    return _active_state_event_projection_fields(
-        goal,
-        state_path=state_path,
-        preferred_todo_ids=preferred_todo_ids,
-        rollout_events=rollout_events,
-        item_limit=item_limit,
-    )
 
 
 def active_state_sections(state_text: str, headings: tuple[str, ...]) -> dict[str, list[str]]:
@@ -723,7 +700,6 @@ def active_state_todo_fields(
         load_rollout_events=load_rollout_events,
         rollout_event_log_path=rollout_event_log_path,
         max_todo_index_rollout_events_per_goal=MAX_TODO_INDEX_ROLLOUT_EVENTS_PER_GOAL,
-        active_state_event_projection_fields=active_state_event_projection_fields,
         parse_active_state_todos=parse_active_state_todos,
         parse_issue_meta_surface=parse_issue_meta_surface,
         backlog_hygiene_warning=backlog_hygiene_warning,
@@ -1176,6 +1152,31 @@ def build_attention_queue(
             )
             if receipts:
                 item["evidence_log_read_receipts"] = receipts
+            project_asset = item.get("project_asset")
+            if not isinstance(project_asset, dict):
+                continue
+            orchestration = project_asset.get("orchestration")
+            if not isinstance(orchestration, dict) or not (
+                orchestration.get("mode") == "multi_subagent"
+                and orchestration.get("spawn_allowed") is True
+                and int(orchestration.get("max_children") or 0) > 0
+            ):
+                continue
+            native_activity = latest_native_child_activity(
+                events, goal_id=goal_id,
+                configured_limit=int(orchestration["max_children"]),
+            )
+            if native_activity:
+                # The shared status snapshot is bounded for Todo work. Once it
+                # reveals a native event, read its exact Turn before showing
+                # counts, so older stages falling outside that window cannot
+                # silently undercount the activity.
+                project_asset["native_child_activity"] = load_native_child_activity(
+                    runtime_root, goal_id=goal_id,
+                    agent_id=native_activity["agent_id"],
+                    turn_instance_id=native_activity["turn_instance_id"],
+                    configured_limit=int(orchestration["max_children"]),
+                )
     return queue
 
 
