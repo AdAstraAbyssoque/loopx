@@ -89,6 +89,7 @@ import {
   type TurnJournalInspectionRequest,
 } from "./turn_driver/turn_journal.ts";
 import { commitTurnJournal } from "./turn_driver/turn_journal_effects.ts";
+import { projectTurnSelectionRejection } from "./turn_driver/selection_rejection.ts";
 import {
   evaluateTodoCompletionFence,
 } from "./todos/completion_fence.ts";
@@ -714,6 +715,7 @@ export function createEffectRuntimeHandlers(
       evaluatePostWritebackHookTransaction,
     ],
     ["collaboration.delegation.binding", selectDelegationBinding],
+    ["turn.selection.rejection", projectTurnSelectionRejection],
     ["collaboration.delegation.preflight", delegationPreflight],
     ["collaboration.delegation.validation_plan", delegationValidationPlan],
     ["collaboration.delegation.turn_plan", delegationTurnPlanDecision],
