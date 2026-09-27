@@ -68,6 +68,11 @@ STEERING_NOT_DELIVERED_CODES = frozenset({
     "live_steering_turn_not_started",
 })
 
+
+class ChatTurnAcceptanceUnavailableError(Exception):
+    """The durable acceptance attempt can be retried with the same request."""
+
+
 class ChatRuntimeAdapter(Protocol):
     @property
     def upstream_thread_id(self) -> str: ...
@@ -914,23 +919,28 @@ class ChatRuntimeController:
             self._check_codex_home(session)
             if loopx_execution and session.get("loopx_tools") is not True:
                 session = self.loopx_mode.activate_tools(session, work_dir=work_dir, objective=objective)
-            accepted = self.store.accept_managed_turn(
-                session_id,
-                client_turn_id=client_turn_id,
-                message=message,
-                attachments=attachments,
-                display_message=(
-                    (
-                        "开启 LoopX 模式，持续推进当前 Goal。"
-                        if (loopx_request or {}).get("operation") == "start"
-                        else "恢复 LoopX 模式。"
-                    )
-                    if loopx_execution
-                    else None
-                ),
-                loopx_execution=loopx_execution,
-                loopx_request=loopx_request,
-            )
+            try:
+                accepted = self.store.accept_managed_turn(
+                    session_id,
+                    client_turn_id=client_turn_id,
+                    message=message,
+                    attachments=attachments,
+                    display_message=(
+                        (
+                            "开启 LoopX 模式，持续推进当前 Goal。"
+                            if (loopx_request or {}).get("operation") == "start"
+                            else "恢复 LoopX 模式。"
+                        )
+                        if loopx_execution
+                        else None
+                    ),
+                    loopx_execution=loopx_execution,
+                    loopx_request=loopx_request,
+                )
+            except OSError as exc:
+                raise ChatTurnAcceptanceUnavailableError(
+                    "Chat turn acceptance is temporarily unavailable."
+                ) from exc
             if accepted.dispatch_required:
                 adapter = self._ensure_adapter_locked(
                     session,
