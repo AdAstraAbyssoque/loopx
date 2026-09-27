@@ -17,6 +17,7 @@ import {recordDelegationAdoption, delegationInventoryItem, delegationInventoryQu
 import {resolveConversationTrigger} from "./collaboration/conversation_trigger.ts";
 import {planChatMode} from "./collaboration/chat_mode.ts";
 import {resolveConversationScope} from "./collaboration/conversation_scope.ts";
+import {planChatTurnAcceptance} from "./turn_driver/chat_turn_acceptance.ts";
 import {previewTeamPlan, planTeamTransaction, teamTransactionIdentity} from "./work_items/team_plan.ts";
 import {commitLocalTeamPlan} from "./work_items/team_plan_authority.ts";
 import {inspectLocalGoalAcceptance, commitLocalGoalAcceptance,
@@ -724,6 +725,7 @@ export function createEffectRuntimeHandlers(
     ["collaboration.chat_mode", planChatMode],
     ["collaboration.conversation.trigger", resolveConversationTrigger],
     ["collaboration.conversation.scope", resolveConversationScope],
+    ["chat.turn.accept", planChatTurnAcceptance],
     ["collaboration.delegation.observe", transitionDelegationObservation],
     ["collaboration.delegation.recover_validated_settlement", recoverValidatedDelegationSettlement],
     ["collaboration.delegation.adoption", recordDelegationAdoption],
