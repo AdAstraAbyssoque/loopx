@@ -100,7 +100,11 @@ def handle_authority_archive_command(
             "coordination.authority_archive.manage", request, timeout=300.0, retry_safe=False
         )
     except (OSError, RuntimeError, ValueError) as error:
-        result = {"status": "failed", "reason": str(error), "authority_changed": False}
+        uncertain = args.authority_archive_action == "migrate" and args.execute
+        result = {"status": "failed", "reason": str(error),
+                  "authority_changed": None if uncertain else False}
+        if uncertain:
+            result.update(reason_code="migration_outcome_unknown", requires_same_plan_retry=True)
     if (args.authority_archive_action == "upgrade" and args.require_current
             and any(row.get("status") == "planned" for row in result.get("results", []))):
         result.update(status="failed", reason="Authority format upgrade required before activating this runtime.")

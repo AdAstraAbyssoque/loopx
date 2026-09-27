@@ -191,3 +191,28 @@ def test_provider_migration_cli_preserves_readback_and_rollback(tmp_path, monkey
     finally:
         subprocess.run([sys.executable, "-c", "from loopx.control_plane.effect_runtime import effect_runtime_result; effect_runtime_result('runtime.shutdown',{},retry_safe=False)"],
                        cwd=REPO, capture_output=True, text=True, timeout=30, check=True)
+
+
+@pytest.mark.parametrize("execute", [False, True])
+def test_migration_transport_loss_never_asserts_that_execution_did_not_publish(tmp_path, monkeypatch, execute):
+    from argparse import Namespace
+    from loopx.cli_commands import authority_archive
+
+    def disconnected(*args, **kwargs):
+        assert kwargs["retry_safe"] is False
+        raise RuntimeError("Connection lost after request delivery")
+
+    monkeypatch.setattr(authority_archive, "effect_runtime_result", disconnected)
+    registry = tmp_path / "registry.json"
+    registry.write_text("{}")
+    args = Namespace(command="authority-archive", authority_archive_action="migrate", goal_id="example",
+                     plan=tmp_path / "plan.json", plan_sha256="a" * 64, execute=execute)
+    outputs = []
+    status = authority_archive.handle_authority_archive_command(
+        args, registry_path=registry, runtime_root_arg=str(tmp_path / "runtime"),
+        print_payload=lambda payload, *_: outputs.append(payload), output_format=lambda _: "json")
+    assert status == 1
+    assert outputs[0]["authority_changed"] is (None if execute else False)
+    if execute:
+        assert outputs[0]["requires_same_plan_retry"] is True
+        assert outputs[0]["reason_code"] == "migration_outcome_unknown"
