@@ -49,7 +49,10 @@ export const conversationReturnContinuityScenario = {
       });
       request.returns = [{ phase: "conclusion", status: "delivered" }];
       await page.getByText(answer, { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
-      await page.getByText("结论已回传", { exact: true }).waitFor({ state: "visible" });
+      // Delivery label owned by collaboration-card.tsx copy: main distinguishes
+      // "reply awaiting delivery" from "reply delivered", so the delivered
+      // conclusion reads 回复已送达 (English: Reply delivered).
+      await page.getByText("回复已送达", { exact: true }).waitFor({ state: "visible" });
       if (!droppedRead) throw new Error("The old-session recovery path was not exercised");
       await page.waitForTimeout(3500);
       if (await page.getByText(answer, { exact: true }).count() !== 1) throw new Error("Late result duplicated");
