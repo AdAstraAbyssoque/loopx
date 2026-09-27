@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import logging
 import os
 from pathlib import Path
 import threading
@@ -1114,12 +1115,16 @@ class ChatRuntimeController:
                     with self.lock:
                         attached = self.adapters.get(session_id)
                     if attached is None or not attached.healthcheck():
-                        self._ensure_adapter(
-                            session,
-                            work_dir=work_dir,
-                            objective=objective,
-                        )
-                        continue
+                        try:
+                            self._ensure_adapter(
+                                session,
+                                work_dir=work_dir,
+                                objective=objective,
+                            )
+                        except Exception as exc:
+                            self._fail_queue_preparation(session_id, active_turn_id, exc)
+                        else:
+                            continue
                     active = self.store.load_turn(session_id, active_turn_id)
                     if active and active.get("status") not in TERMINAL_TURN_STATES:
                         self.closed.wait(0.05)
@@ -1132,11 +1137,17 @@ class ChatRuntimeController:
                 refreshed = self.store.load_session(session_id)
                 if refreshed is None:
                     return
-                adapter = self._ensure_adapter(
-                    refreshed,
-                    work_dir=work_dir,
-                    objective=objective,
-                )
+                preparation_error = None
+                try:
+                    adapter = self._ensure_adapter(
+                        refreshed,
+                        work_dir=work_dir,
+                        objective=objective,
+                    )
+                except Exception as exc:
+                    # An accepted queued request still owns an outcome when
+                    # workspace preparation or adapter restoration fails.
+                    preparation_error = exc
                 with self.lock:
                     self.session_queue_wakeups.discard(session_id)
                 turn = self.store.claim_next_queued_turn(session_id)
@@ -1150,6 +1161,9 @@ class ChatRuntimeController:
                             self.session_queue_threads.pop(session_id, None)
                     return
                 turn_id = str(turn["turn_id"])
+                if preparation_error is not None:
+                    self._fail_queue_preparation(session_id, turn_id, preparation_error)
+                    continue
                 with self.lock:
                     self.turn_done_events[(session_id, turn_id)] = threading.Event()
                 self._run_turn(
@@ -1166,6 +1180,25 @@ class ChatRuntimeController:
                     self.session_queue_workers.discard(session_id)
                     self.session_queue_threads.pop(session_id, None)
                     self.session_queue_wakeups.discard(session_id)
+
+    def _fail_queue_preparation(
+        self, session_id: str, turn_id: str, error: Exception,
+    ) -> None:
+        logging.getLogger(__name__).error(
+            "Chat queue runtime preparation failed",
+            exc_info=(type(error), error, error.__traceback__),
+        )
+        self._fail_turn(
+            session_id, turn_id,
+            error.error_code if isinstance(error, CodexChatAgentError) else "runtime_unavailable",
+            str(error) if isinstance(error, CodexChatAgentError) else (
+                "The Agent runtime could not be prepared. Check the runtime installation "
+                "and configuration, then retry."
+            ),
+            status="failed",
+            gate=error.gate if isinstance(error, CodexChatAgentError) else None,
+            expected_statuses={"queued", "starting", "running"},
+        )
 
     def _run_turn(
         self,
@@ -1390,12 +1423,13 @@ class ChatRuntimeController:
         *,
         status: str,
         gate: dict[str, Any] | None = None,
+        expected_statuses: set[str] | None = None,
     ) -> None:
         completed = utc_now()
         failed = self.store.update_turn(
             session_id,
             turn_id,
-            expected_statuses={"starting", "running"},
+            expected_statuses=expected_statuses if expected_statuses is not None else {"starting", "running"},
             status=status,
             error_code=error_code,
             error=message,

@@ -26,12 +26,21 @@
 
 ## Current delivery frontier (2026-09-27)
 
-Shipped capture, pagination, File format upgrade and Python prototype retirement
-are not future work. Managed Host supervision replaces the duplicated Python
-process lifecycles; authority-bound execution remains open. The current plan
-has four new deliveries including this one, three afterwards; integration of
-#5140/#5054/#4931 and D1–D3 evidence are separate. The old three architectural
-packages are not a decrementing PR counter.
+Audit `157ab7b11` and current PR states: source capture, pagination, File format
+upgrade and Python prototype retirement are delivered. This delivery repairs
+reviewed-input recovery and adds independent retained-history audit. Plan four
+scoped PRs starting here: this recovery slice, external execution interval
+protection, whole-Goal activation/rollback integration, and default entrypoints
+with final bounded Python retirement. Three planned scopes follow this PR;
+existing #5054/#4931 and D2/D3 evidence remain separate. This is not a guaranteed
+count of future defect repairs.
+[Current inventory, rationale and exits](ledger/shared-goal-authority-state-provider-v0/2026-09-27-recovery-audit.md).
+
+Managed Host supervision lands in the same window as a separate delivered slice:
+one TS supervisor now owns generic command and Codex CLI process lifetimes, so
+authority-bound execution stays open rather than closing here, and the old three
+architectural packages remain a pointer instead of a decrementing PR counter.
+Its named plan, changed estimate and boundaries are recorded separately.
 [Named plan, changed estimate and boundaries](ledger/shared-goal-authority-state-provider-v0/2026-09-27-host-supervision.md).
 
 File retained-state storage now reuses the existing TS checkpoint/delta codec,

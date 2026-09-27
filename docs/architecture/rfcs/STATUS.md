@@ -18,13 +18,14 @@ appendix may keep dated history, but no dated log heading may precede it.
 
 [中文版](STATUS.zh-CN.md) is the semantic mirror of this file.
 
-## Accepted (37)
+## Accepted (39)
 
 | RFC | Header status | Supersedes / closes | Ledger |
 | --- | --- | --- | --- |
 | [RFC: Agent IM, LoopX, And OpenViking Collaboration v0](agent-im-openviking-collaboration-v0.md) | Accepted | none | — |
 | [RFC: Agent Loop Effect Interpreter](agent-loop-effect-interpreter-v0.md) | Accepted | none | — |
 | [RFC: Agent Session Execution Modes (v0)](agent-session-execution-modes-v0.md) | Accepted | none | — |
+| [App conversations and reusable asynchronous work delivery](app-conversation-and-async-inbox-v0.md) | Accepted | none | — |
 | [RFC: Automatic Execution Admission (v0)](automatic-execution-admission-v0.md) | Accepted | none | — |
 | [RFC: Benchmark Study Upload and Dashboard Projection v0](benchmark-study-upload-dashboard-v0.md) | Accepted | none | — |
 | [RFC: Capable Agent Manager and Semantic Work Handoff (v0)](capable-manager-semantic-handoff-v0.md) | Accepted | none | [1 entry](ledger/capable-manager-semantic-handoff-v0/) |
@@ -48,6 +49,7 @@ appendix may keep dated history, but no dated log heading may precede it.
 | [RFC: Long-Running Agent Reliability Diagnostics and Governed Delivery v0](long-running-agent-reliability-diagnostics-governed-delivery-v0.md) | Accepted | none | — |
 | [LoopX Overall Roadmap v0: Product, Collaboration, Technology and Delivery](loopx-overall-roadmap-v0.md) | Accepted | none | — |
 | [Manager runtime profile v0](manager-runtime-profile-v0.md) | Accepted | none | — |
+| [RFC: Monorepo Distribution Split (v0)](monorepo-distribution-split-v0.md) | Accepted | none | — |
 | [RFC: Obelisk Session Evidence Provider v0](obelisk-session-evidence-provider-v0.md) | Accepted | none | — |
 | [RFC: Agent Judgment and Optional Independent Assessment — Jev as a Candidate (v0)](optional-semantic-assistance-jev-v0.md) | Accepted | none | — |
 | [RFC: Post-Outcome Memory Utility Attribution v0](post-outcome-memory-utility-attribution-v0.md) | Accepted | none | — |
@@ -56,7 +58,7 @@ appendix may keep dated history, but no dated log heading may precede it.
 | [RFC: Research Exploration Control Plane v0](research-exploration-control-plane-v0.md) | Accepted | none | — |
 | [RFC: Semantic Vocabulary Convergence and Commit-Time Drift Checks (v0)](semantic-vocabulary-convergence-v0.md) | Accepted | none | [5 entries](ledger/semantic-vocabulary-convergence-v0/) |
 | [RFC: Shared Goal Alignment and Governed Amendment Protocol (v0)](shared-goal-alignment-and-governed-amendment-v0.md) | Accepted | none | [2 entries](ledger/shared-goal-alignment-and-governed-amendment-v0/) |
-| [RFC: LoopX Shared Control-Plane Authority and Pluggable State Providers (v0)](shared-goal-authority-state-provider-v0.md) | Accepted | none | [19 entries](ledger/shared-goal-authority-state-provider-v0/) |
+| [RFC: LoopX Shared Control-Plane Authority and Pluggable State Providers (v0)](shared-goal-authority-state-provider-v0.md) | Accepted | none | [20 entries](ledger/shared-goal-authority-state-provider-v0/) |
 | [RFC: Single-Owner Local Daemon (v0)](single-owner-local-daemon-v0.md) | Accepted | none | — |
 | [RFC: TypeScript Control-Plane Migration Direction v0](typescript-control-plane-migration-v0.md) | Accepted | none | [12 entries](ledger/typescript-control-plane-migration-v0/) |
 

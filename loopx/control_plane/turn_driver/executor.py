@@ -15,6 +15,10 @@ from ..effect_program import (
     interpret_turn_result_packet,
     settlement_result_payload,
 )
+from ..goals.first_party_host_admission import (
+    FirstPartyHostGoalAdmission,
+    FirstPartyHostRuntimeRejected,
+)
 from ..goals.goal_vision import normalize_goal_vision_packet
 from ..work_items.delivery_batch_scale import require_delivery_batch_scale
 from ..work_items.delivery_outcome import require_delivery_outcome
@@ -147,6 +151,9 @@ def build_loopx_turn_host_request(plan: Mapping[str, Any]) -> dict[str, Any]:
             "stdout": "one public-safe JSON object",
         },
     }
+    goal_ref = plan.get("goal_ref")
+    if isinstance(goal_ref, Mapping):
+        request["goal_ref"] = dict(goal_ref)
     reward_memory_recall = plan.get("reward_memory_recall")
     if isinstance(reward_memory_recall, Mapping):
         request["reward_memory_recall"] = dict(reward_memory_recall)
@@ -709,6 +716,8 @@ def _run_host_runner(
                 else {}
             ),
         }
+    except FirstPartyHostRuntimeRejected:
+        raise
     except Exception as exc:  # noqa: BLE001 - host adapters fail closed at boundary
         return {"ok": False, "reason": type(exc).__name__, "returncode": None}
     if not isinstance(value, dict):
@@ -754,6 +763,7 @@ def _host_result_stage(
     confirm_start: Callable[[], None] | None = None,
     usage_runtime_root: Path | None = None,
     usage_goal_id: str = "",
+    goal_admission: FirstPartyHostGoalAdmission | None = None,
 ) -> tuple[dict[str, Any] | None, list[str], dict[str, Any] | None]:
     completed_phases = list(journal.get("completed_phases") or [])
     result = (
@@ -805,7 +815,12 @@ def _host_result_stage(
                 journal["host_recovery"] = build_host_recovery_record(recovery_kind)
             else:
                 journal.pop("host_recovery", None)
-            _write_journal(journal_path, journal)
+            if goal_admission is None:
+                _write_journal(journal_path, journal)
+            else:
+                goal_admission.accept_result(
+                    lambda: _write_journal(journal_path, journal)
+                )
             return (
                 None,
                 [],
@@ -843,7 +858,12 @@ def _host_result_stage(
             result_kind=LoopXTurnResultKind.VALIDATION_FAILED.value,
             validation_stage="host_result_contract",
         )
-        _write_journal(journal_path, journal)
+        if goal_admission is None:
+            _write_journal(journal_path, journal)
+        else:
+            goal_admission.accept_result(
+                lambda: _write_journal(journal_path, journal)
+            )
         return (
             None,
             list(TRANSACTION_PHASES[:2]),
@@ -864,7 +884,12 @@ def _host_result_stage(
         result_kind=normalized.get("result_kind"),
         completed_phases=completed_phases,
     )
-    _write_journal(journal_path, journal)
+    if goal_admission is None:
+        _write_journal(journal_path, journal)
+    else:
+        goal_admission.accept_result(
+            lambda: _write_journal(journal_path, journal)
+        )
     return normalized, completed_phases, None
 
 
@@ -1231,6 +1256,7 @@ def run_loopx_turn_once(
     post_settlement: PostSettlement | None = None,
     admit_start: Callable[[Mapping[str, Any]], dict[str, Any]] | None = None,
     confirm_start: Callable[[], None] | None = None,
+    goal_admission: FirstPartyHostGoalAdmission | None = None,
 ) -> dict[str, Any]:
     if host_runner is not None and host_argv is not None:
         raise ValueError("run-once accepts either host_argv or host_runner, not both")
@@ -1290,6 +1316,8 @@ def run_loopx_turn_once(
         journal = _load_journal(journal_path)
         recovery_decision: dict[str, Any] | None = None
         if journal is not None:
+            if goal_admission is not None:
+                goal_admission.require_current()
             envelope = (
                 plan.get("turn_envelope")
                 if isinstance(plan.get("turn_envelope"), Mapping)
@@ -1338,6 +1366,8 @@ def run_loopx_turn_once(
         needs_host = validation_reinvokes_host or journal is None or "typed_result" not in list(
             journal.get("completed_phases") or []
         )
+        if needs_host and goal_admission is not None:
+            goal_admission.require_current()
         admission = None
         if needs_host and admit_start is not None:
             admission = admit_start({
@@ -1440,6 +1470,7 @@ def run_loopx_turn_once(
                 if admission is not None and admission.get("reserved") is True
                 else None
             ),
+            goal_admission=goal_admission,
         )
         if terminal is not None:
             return finish_recovery(terminal)

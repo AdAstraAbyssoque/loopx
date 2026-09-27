@@ -521,7 +521,26 @@ export const runGoalSchema = z.object({
   coordination: z.object({
     agent_model: z.string().optional().nullable(),
     registered_agents: z.array(z.string()).optional().default([]),
+    // Opaque host thread ids stay out of the App state.
+    thread_agent_bindings: z.array(z.object({
+      agent_id: z.string().optional().nullable(),
+      host_surface: z.string().optional().nullable(),
+    })).optional().default([]).catch([]),
   }).optional().nullable(),
+  host_thread_activity: z.object({
+    observed_at: z.string().optional().nullable(),
+    // Older or malformed observations cannot prove that every binding was read.
+    completeness: z.enum(["complete", "incomplete"]).catch("incomplete").default("incomplete"),
+    threads: z.array(z.object({
+      agent_id: z.string().optional().nullable(),
+      host_surface: z.string(),
+      state: z.enum(["turn_open", "idle", "archived", "unknown"]).catch("unknown"),
+      reason: z.string().optional().nullable(),
+      turn_started_at: z.string().optional().nullable(),
+      last_turn_ended_at: z.string().optional().nullable(),
+      last_event_at: z.string().optional().nullable(),
+    })).optional().default([]),
+  }).optional().nullable().catch(null),
   index_exists: z.boolean().optional().default(false),
   raw_index_records: z.number().optional().default(0),
   unique_runs: z.number().optional().default(0),

@@ -15,13 +15,14 @@
 
 [English](STATUS.md) 与本文互为语义镜像。
 
-## 已接受 (37)
+## 已接受 (39)
 
 | RFC | 头部状态 | 替代 / 关闭 | Ledger |
 | --- | --- | --- | --- |
 | [RFC: Agent IM, LoopX, And OpenViking Collaboration v0](agent-im-openviking-collaboration-v0.md) | 已接受 | none | — |
 | [RFC：Agent Loop Effect Interpreter（v0）](agent-loop-effect-interpreter-v0.zh-CN.md) | 已接受 | 无 | — |
 | [RFC：Agent 会话执行模式（v0）](agent-session-execution-modes-v0.zh-CN.md) | 已接受 | 无 | — |
+| [App 会话与可复用的异步工作投递](app-conversation-and-async-inbox-v0.zh-CN.md) | 已接受 | none | — |
 | [RFC：自动执行准入（v0）](automatic-execution-admission-v0.zh-CN.md) | 已接受 | 无 | — |
 | [RFC: Benchmark Study Upload and Dashboard Projection v0](benchmark-study-upload-dashboard-v0.md) | 已接受 | none | — |
 | [RFC：强能力 Agent 管家与语义工作交接（v0）](capable-manager-semantic-handoff-v0.zh-CN.md) | 已接受 | 无 | [1 条](ledger/capable-manager-semantic-handoff-v0/) |
@@ -45,6 +46,7 @@
 | [RFC：长程 Agent 可靠性诊断与治理交付 v0](long-running-agent-reliability-diagnostics-governed-delivery-v0.zh-CN.md) | 已接受 | 无 | — |
 | [LoopX 整体路线总纲 v0：产品、协作、技术与交付](loopx-overall-roadmap-v0.zh-CN.md) | 已接受 | 无 | — |
 | [Manager runtime profile v0 / 管家运行模式 v0](manager-runtime-profile-v0.zh-CN.md) | 已接受 | 无 | — |
+| [RFC：Monorepo 内的发行物拆分（v0）](monorepo-distribution-split-v0.zh-CN.md) | 已接受 | 无 | — |
 | [RFC：Obelisk Session Evidence Provider v0](obelisk-session-evidence-provider-v0.zh-CN.md) | 已接受 | 无 | — |
 | [RFC：Agent 判断与可选独立评估——以 Jev 为候选方案（v0）](optional-semantic-assistance-jev-v0.zh-CN.md) | 已接受 | 无 | — |
 | [RFC：结果后记忆效用归因 v0](post-outcome-memory-utility-attribution-v0.zh-CN.md) | 已接受 | 无 | — |
@@ -53,7 +55,7 @@
 | [RFC：研究型探索控制面 v0](research-exploration-control-plane-v0.zh-CN.md) | 已接受 | 无 | — |
 | [RFC：语义词表收敛与提交期漂移检查（v0）](semantic-vocabulary-convergence-v0.zh-CN.md) | 已接受 | 无 | [5 条](ledger/semantic-vocabulary-convergence-v0/) |
 | [RFC：共享 Goal 对齐与受治理 Amendment 协议（v0）](shared-goal-alignment-and-governed-amendment-v0.zh-CN.md) | 已接受 | 无 | [2 条](ledger/shared-goal-alignment-and-governed-amendment-v0/) |
-| [RFC：LoopX 共享控制面权威与可插拔状态 Provider（v0）](shared-goal-authority-state-provider-v0.zh-CN.md) | 已接受 | 无 | [19 条](ledger/shared-goal-authority-state-provider-v0/) |
+| [RFC：LoopX 共享控制面权威与可插拔状态 Provider（v0）](shared-goal-authority-state-provider-v0.zh-CN.md) | 已接受 | 无 | [20 条](ledger/shared-goal-authority-state-provider-v0/) |
 | [RFC: Single-Owner Local Daemon (v0)](single-owner-local-daemon-v0.md) | 已接受 | none | — |
 | [RFC：LoopX 控制面 TypeScript 渐进迁移方向 v0](typescript-control-plane-migration-v0.zh-CN.md) | 已接受 | 无 | [12 条](ledger/typescript-control-plane-migration-v0/) |
 

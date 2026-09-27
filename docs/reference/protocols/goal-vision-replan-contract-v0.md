@@ -131,6 +131,35 @@ the same `agent_id` as the refresh run. This keeps `research-executor`,
 `evaluator-promoter`, and other roles from overwriting or satisfying each
 other's active vision.
 
+### Replan planning guidance
+
+The shared `replan_action_packet.planning_guidance` carries two short Agent
+instructions through full/compact quota and the host Turn envelope:
+
+- Preserve the requested end state under current user direction. A bounded
+  slice retains outstanding requirements; easier tests cannot redefine
+  acceptance. User-authorized scope changes, permissions, budgets and stop
+  conditions remain authoritative.
+- Before claiming Goal achievement, check every current requirement and
+  deliverable against authoritative evidence of the actual current state.
+  Missing, stale or indirect evidence leaves completion unproven. An empty Todo
+  list, a passing subset or a settled replan is insufficient; blocked, exhausted
+  and superseded outcomes remain distinct from achievement.
+
+This guidance is included by default whenever a replan action packet is
+projected. It is Agent judgment guidance, not a new machine-enforced acceptance
+gate or a permission grant. Typed semantic outcomes, lifecycle transitions and
+non-replan turns are unchanged. The existing TypeScript replan owner supplies
+the text; CLI and host projections preserve it without a new setting or editor.
+Transport tests prove delivery and unchanged gates, not improved model behavior.
+
+共享 replan action packet 默认携带两条简短指引，并在完整/精简 quota 与
+Turn envelope 中保留：不能为了容易通过测试而悄悄缩小目标；宣布 Goal 达成前，
+须逐项核对当前要求与实际状态的权威证据。阶段成果保留剩余要求，证据缺失、
+过期或间接时保留未证实的缺口；阻塞、探索耗尽及被替代不等于达成。
+用户授权的范围调整、权限、预算和停止条件仍有效。这是 Agent 判断指引，
+不新增机器验收门禁或配置，不改变已有语义写回规则；投影测试不代表模型效果提升。
+
 ### Path Delta
 
 A vision packet may include a top-level `path_delta` object; `goal_path_delta_v0`
@@ -306,6 +335,12 @@ The basis covers the selected Todo, its dependency closure and recorded results,
 shared Goal prose and User Todos, the owner acceptance document/revision when
 configured, the current agent vision, and the local source binding. A replan
 obligation covers the full Todo frontier. Archived dependencies remain inputs.
+Large local bases use digest-checked private files across the Python/TypeScript
+runtime boundary, including the response; the CLI still returns the complete
+basis. The 2 MiB default RPC guard remains for other effects. File size is
+bounded and an unverifiable response after a possible commit is ambiguous,
+so the caller reads the exact receipt before retrying any mutation. Neither
+transport nor a future paged presentation may silently omit a basis component.
 Todo display positions, source headings, and the Goal's global `updated_at` are
 excluded; an unrelated Agent Todo or run-history append does not invalidate an
 otherwise unchanged Todo-bound basis. Shared prose is deliberately conservative:

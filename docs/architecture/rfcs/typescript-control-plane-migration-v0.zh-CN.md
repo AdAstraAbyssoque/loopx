@@ -15,12 +15,30 @@
 ---
 
 
+### 产品对话与通用异步 inbox
+
+R1–R3 的 TS 消费者包括 App 产品路径，不只 CLI 结算。
+[App/inbox 融合设计](app-conversation-and-async-inbox-v0.md#ts-and-generic-async-inbox-migrate-with-the-user-path)
+按调用者修复、行为刻画、完整异步生命周期切换、真实 adapter 恢复与旧代码删除推进。
+复用 Chat ingress、Agent 通用 collaboration 和 operator inbox 的既有 owner；
+将与 Lark 无关的 pending／重放／处理决定规则归入 TS，provider IO、认证与回复格式
+保留在扩展。managed／attached 保持唯一执行驱动与原请求身份。
+首个 App 结果不需要第二份 inbox 存储、逐字段 RPC 或全量重写。
+这里是 T0–T4 的产品消费计划，不新增 provider promotion，也不声称迁移完成。
+
+
 ## 当前交付边界（2026-09-27）
 
-已交付的 capture、分页、File 格式升级与 Python 原型退役不再计入待开发。
-当前进程监督切片删除通用 Host/Codex CLI 的重复 Python 生命周期实现，
-执行中租约约束仍开放。当前计划含本次四个新增交付，之后三个；#5140、
-#5054、#4931 的在途集成及 D1–D3 证据单列。旧“三个架构包”不是递减 PR 计数器。
+按 `157ab7b11` 与当前 PR 核对，来源捕获、分页、File 格式升级及 Python 原型
+退役已交付。本次修复审核输入恢复并增加独立历史审计；从本次开始规划四个交付
+PR：本次恢复切片、外部执行区间保护、整 Goal 激活/回退集成、默认入口及最后
+一批有界 Python 退役。本次之后剩后三个规划范围；#5054/#4931 已有 PR，D2/D3
+缺失证据另列，不能保证最终缺陷修复数量。
+[当前清单、依据及退出条件](ledger/shared-goal-authority-state-provider-v0/2026-09-27-recovery-audit.zh-CN.md)。
+
+同一窗口另有已交付的进程监督切片：通用命令与 Codex CLI 的进程生命周期改由
+一个 TS supervisor 承担，因此执行中租约约束仍开放，不由本次关闭；旧“三个
+架构包”仍是指针，不是递减 PR 计数器。该切片的逐项计划、估算变化与边界单列。
 [核对的逐项计划、估算变化与边界](ledger/shared-goal-authority-state-provider-v0/2026-09-27-host-supervision.zh-CN.md)。
 
 ## 旧观测写入退役（2026-09-24）

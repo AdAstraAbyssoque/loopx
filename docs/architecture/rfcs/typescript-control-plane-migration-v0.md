@@ -15,14 +15,37 @@
 
 ---
 
+### Product conversations and asynchronous inbox
+
+R1–R3 also consume the typed kernel through the App, not only CLI settlement.
+The [App/inbox integration plan](app-conversation-and-async-inbox-v0.md#ts-and-generic-async-inbox-migrate-with-the-user-path)
+orders caller fixes, characterization, one complete async lifecycle cutover,
+real-adapter recovery and deletion. Reuse Chat ingress, Agent-neutral collaboration
+and operator-inbox owners; extract Lark-independent pending/replay/disposition
+rules while retaining provider IO, authentication and delivery formatting.
+Managed and attached paths preserve one execution driver and existing request
+identity. No second inbox store, per-field bridge expansion or full rewrite is
+required for the first App outcome. These are planned product consumers of
+T0–T4, not additional provider promotion or completed migration claims.
+
+
 ## Current delivery frontier (2026-09-27)
 
-Shipped capture, pagination, File format upgrade and Python prototype retirement
-are not future work. Managed Host supervision replaces the duplicated Python
-process lifecycles; authority-bound execution remains open. The current plan
-has four new deliveries including this one, three afterwards; integration of
-#5140/#5054/#4931 and D1–D3 evidence are separate. The old three architectural
-packages are not a decrementing PR counter.
+Audit `157ab7b11` and current PR states: source capture, pagination, File format
+upgrade and Python prototype retirement are delivered. This delivery repairs
+reviewed-input recovery and adds independent retained-history audit. Plan four
+scoped PRs starting here: this recovery slice, external execution interval
+protection, whole-Goal activation/rollback integration, and default entrypoints
+with final bounded Python retirement. Three planned scopes follow this PR;
+existing #5054/#4931 and D2/D3 evidence remain separate. This is not a guaranteed
+count of future defect repairs.
+[Current inventory, rationale and exits](ledger/shared-goal-authority-state-provider-v0/2026-09-27-recovery-audit.md).
+
+Managed Host supervision lands in the same window as a separate delivered slice:
+one TS supervisor now owns generic command and Codex CLI process lifetimes, so
+authority-bound execution stays open rather than closing here, and the old three
+architectural packages remain a pointer instead of a decrementing PR counter.
+Its named plan, changed estimate and boundaries are recorded separately.
 [Named plan, changed estimate and boundaries](ledger/shared-goal-authority-state-provider-v0/2026-09-27-host-supervision.md).
 
 ## Native authority qualification and prototype retirement (2026-09-26)
@@ -1128,6 +1151,29 @@ wire-growth evidence; it does not make full-history parsing constant-memory or
 qualify distributed execution. Cursor/checkpoint reduction remains a measured
 follow-up with complete-source parity, not a second Python policy. See the
 [history decision evidence](ledger/typescript-control-plane-migration-v0/2026-09-22-replan-history-policy.md).
+
+**Checkpoint read-context transport.** A long-lived Goal can exceed the Effect
+runtime's 2 MiB socket limit even when the original Turn receipt is small:
+complete shared Goal prose and archived Todo facts are part of the read basis,
+and the basis may also exceed the response limit. Checkpoint source, evaluation,
+replay inspection and commit explicitly opt into same-UID private request and
+response files with byte counts and SHA-256 digests. The 2 MiB socket boundary
+and default behavior of other effects remain intact. File/SQLite and legacy
+Markdown still use the same TypeScript checkpoint reducer and exact receipt;
+the transport neither truncates history nor creates a Python decision or new
+authority. Missing, changed, non-private or over-64-MiB files fail closed.
+After a handler may have committed, an unverifiable response stays ambiguous
+and requires exact receipt readback, never automatic mutation retry.
+
+This removes the immediate transport ceiling, not the cost of projecting a
+complete multi-megabyte basis. The next measured T3 cut should combine the
+canonical source read and checkpoint reduction inside one TypeScript call, then
+offer a versioned manifest with bounded pages for human/Agent inspection.
+Every page must bind to the same source head and disclose omitted components;
+the receipt must still hash the complete relevant Todo/dependency, User Todo,
+Goal prose, acceptance and vision basis. A display limit must never become a
+settlement limit. Retain the current complete read until that parity and stale-
+head recovery are qualified on legacy, File and SQLite backends.
 
 **Recovery boundary (2026-09-22).** The
 [authority archive command](../../reference/authority-archive.md) places retained

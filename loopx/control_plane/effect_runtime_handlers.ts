@@ -129,6 +129,7 @@ import {
   decideProjectSessionBind,
   decideProjectSessionUnbind,
 } from "./goals/source_session_lifetime.ts";
+import { decideFirstPartyHostRuntime } from "./goals/first_party_host_runtime.ts";
 import {
   evaluateDeliveryRoute,
 } from "./turn_driver/delivery_continuity.ts";
@@ -231,6 +232,11 @@ import {
   projectExternalEvidenceRetirement,
   recordExternalEvidenceReceiptObservation,
 } from "./capabilities/external_evidence.ts";
+import {
+  buildRewardMemorySurfaceReadCheckpoints,
+  planRewardMemoryDecision,
+  projectRewardMemoryDecision,
+} from "./capabilities/reward_memory_decision.ts";
 
 type EffectRuntimeHandler = (params: JsonObject) => unknown | Promise<unknown>;
 
@@ -532,6 +538,7 @@ export function createEffectRuntimeHandlers(
     ["goal.source_session.bind.decide", decideProjectSessionBind],
     ["goal.source_session.unbind.decide", decideProjectSessionUnbind],
     ["goal.source_session.recreate.decide", decideGoalRecreation],
+    ["goal.first_party_host_runtime.decide", decideFirstPartyHostRuntime],
     ["goal.acceptance.inspect", inspectLocalGoalAcceptance],
     ["goal.acceptance.configure", commitLocalGoalAcceptance],
     ["goal.acceptance.verify.commit", commitLocalGoalAcceptanceVerification],
@@ -726,6 +733,9 @@ export function createEffectRuntimeHandlers(
     ["external_evidence.receipt", recordExternalEvidenceReceiptObservation],
     ["external_evidence.admit", evaluateExternalEvidenceAdmission],
     ["external_evidence.retire", projectExternalEvidenceRetirement],
+    ["reward_memory.decision.plan", planRewardMemoryDecision],
+    ["reward_memory.decision.project", projectRewardMemoryDecision],
+    ["reward_memory.read_authority.surface_checkpoints", buildRewardMemorySurfaceReadCheckpoints],
     [
       "manager.return_delivery.normalize_attempt",
       (params) => normalizeManagerReturnDeliveryAttempt(params.attempt),

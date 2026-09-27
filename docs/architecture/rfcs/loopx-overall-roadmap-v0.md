@@ -24,6 +24,24 @@ Product scope includes reusable engineering delivery, research, material/knowled
 
 Two adoption routes share engineering assets but qualify independently: **native LoopX long-horizon coordination** prioritizes G1/G2; **observer-first reliability diagnostics** can demonstrate value without waiting for hundred-Agent scale or a shared service. Paid deployments, enterprise offerings and hosted services remain product hypotheses, not demonstrated market fit or operating commitments.
 
+### App-first conversation delivery
+
+The installed App is the primary interaction and qualification surface; Lark
+follows through the same semantics with independent transport evidence. Move
+ongoing managed **and attached** work conversations into LoopX: preserve the
+existing responsible worker, context and execution driver, show actual progress,
+accept corrections and return the result to the original conversation. Merely
+embedding a transcript or sending an inbox ACK does not complete that transition.
+
+[App conversations and asynchronous inbox](app-conversation-and-async-inbox-v0.md)
+refines R1–R3 without adding a milestone: repair ordinary input and durable
+entry; qualify connect/continue, truthful activity, stop/recovery and readable
+results; then complete G1's two real collaboration cycles. Prioritize these
+before cross-channel visual parity or scale. Lark's reusable inbox lifecycle
+should converge into the existing typed coordination owner, while provider
+authentication/addressing/reactions remain in its extension. Product-facing TS
+migration follows whole working journeys, not leaf-RPC counts or a rewrite gate.
+
 ### Relationship to Existing Documents
 
 - This is the product, engineering, research and adoption roadmap. Section 2 defines S1–S13 streams; Section 3 defines G0–G5 portfolio milestones; Section 4 maps every RFC; Sections 5–6 detail the multi-Agent core path; Section 8 preserves the focused audit.
@@ -45,7 +63,7 @@ P0 blocks correctness or continuity in the current user journey. P1 enables repe
 | **S7 Budget, scheduling and fleet scale · P0 observation/P1–P2 expansion** | Quota/scheduler and partial usage aggregates exist; full provider cost, distributed reservations and hundred-Agent concurrency need evidence | Separate configured budget, admission, consumption and estimates; unknown is not zero and replay cannot double-charge. R7 pagination/bounded summaries and [complete-history transport](typescript-control-plane-migration-v0.md), including refresh/replay/single-debit evidence beyond the RPC limit; provider/host limits, fairness, backpressure, event wake and isolation; report registration/activity/throughput and cost per accepted outcome separately |
 | **S8 Capabilities, extensions and domain integration · P1/P2** | Capability catalog, extension lifecycle, hooks, engineering/research/content/office capabilities and computer-use contracts exist | First exercise the shared control plane with existing issue-fix/PR-review and material/research callers. Every provider has readiness/version/permissions/default-off/uninstall/rollback/isolation and real-entry evidence. New domain effects start with one simulated operation, not a marketplace or workflow DSL |
 | **S9 Identity, authority, privacy and trust · continuous P0/P1–P2 remote** | Public/private scope, capability gates, fencing and confirmation contracts belong to existing owners | R1/R3 cover sender/audience/artifact scope and stale authority; R6 authenticates tenant/Goal/actor/host, rotation/revocation and least privilege. Qualify credential custody, untrusted tool/document inputs, dependency supply chain, audit retention/deletion and vulnerability response through real paths; roles/messages/memory mint no write authority |
-| **S10 Reliability, diagnostics and operations · P0/P1** | Recovery/canary, read-only diagnostics prototype and DSH event adapter exist; C0/C1, overhead and full operations qualification are open | Failure classification→observable state→recovery drill→regression prevention; process/storage/network/delivery failures and data growth. Use [bounded repair lookup and targeted diagnostics](../../../skills/loopx-self-repair/references/targeted-diagnostics.md) to reduce redundant reads above the provider boundary; measure backend-specific cold/warm reads, writes and lock waits separately. Freeze SLO/RPO/RTO/capacity/retention boundaries and measure before qualification. Runbooks include upgrade, restore, stop and human takeover; test counts do not prove recovery |
+| **S10 Reliability, diagnostics and operations · P0/P1** | Recovery/canary, read-only diagnostics prototype and DSH event adapter exist; C0/C1, overhead and full operations qualification are open | Failure classification→observable state→recovery drill→regression prevention; process/storage/network/delivery failures and data growth. Accepted Chat requests must settle even when runtime preparation fails before dispatch; qualify missing runtime assets, stop races and recovery without replay under [the shared conversation operational contract](capable-manager-semantic-handoff-v0.md#10-operational-contract). Use [bounded repair lookup and targeted diagnostics](../../../skills/loopx-self-repair/references/targeted-diagnostics.md) to reduce redundant reads above the provider boundary; measure backend-specific cold/warm reads, writes and lock waits separately. Freeze SLO/RPO/RTO/capacity/retention boundaries and measure before qualification. Runbooks include upgrade, restore, stop and human takeover; test counts do not prove recovery |
 | **S11 Evaluation and scientific research · continuous P1/P2 research** | Benchmark toolkit, Explore, long-horizon portfolio and ten frontier-science tracks have designs/partial implementations | Pin native/passive/governed arms, model/harness/budget/task split and evaluator; report native scores, cost, failures, attention and uncertainty. Prioritize sequential evidence, continuation and stride; memory, formal kernel, curriculum/evolution, active experiments and multiscale state follow T01–T10 gates without automatic production treatment |
 | **S12 Release, developer experience and community governance · P0 hygiene/P1** | Install/source validation, registration, DCO/PR, test layers, contributor routes and bilingual docs exist | Qualify first work and upgrade/rollback from clean machines/release artifacts; host/OS support follows the release contract. Reduce localization/test/review effort for useful changes; preserve exact-head evidence, fixtures, compatibility, maintainer routing and contributor credit; retire duplicate protocols/stale evidence |
 | **S13 Adoption, ecosystem and sustainability · P1 discovery/P2 pilots** | Public adoption loop, showcases, licensing/governance and observer-first product contract exist; paid PMF is unproven | Gather independent first/repeat usage and exit reasons; reproducible cases and pilots with fixed budgets/acceptance/rollback. Retain reusable adapters/delivery guides. Account for model/compute/storage/support and maintenance costs; only repeated demand justifies commercial hosting/support/distribution decisions, with no invented SLA or open-source-term change |
@@ -512,6 +530,12 @@ preflight through the actual Turn dry-run and selected executor/profile. Task
 admission, current pinned acceptance and runtime availability remain distinct;
 unprobed generic/cloud availability stays unknown. The same inspection is available
 to CLI and enabled MCP/new Chat tools, without a new state store or launch effect.
+Turn exception readback now distinguishes uncertain invocation effects from the
+original journal's checkpointed effects and prepared-effect recovery. This is a
+bounded R2 recovery slice, not runtime provisioning or G1 completion; caller
+admission, fresh task derivation and frontend/Lark qualification remain open.
+中文：异常读回区分本次调用未知副作用与原 Turn 的持久观察/待核对效果，只完成
+R2 的一个恢复切片；调用方准入、新任务生成与前端/Lark 验收仍未闭环。
 The same owner-local panel now opens current validated artifact text and its
 version/source identifiers, accepts feedback through the original coordinator
 inbox and exposes coordinator pause with its actual scope. Stale reads clear prior
