@@ -36,7 +36,9 @@ embedding a transcript or sending an inbox ACK does not complete that transition
 [App conversations and asynchronous inbox](app-conversation-and-async-inbox-v0.md)
 refines R1–R3 without adding a milestone: repair ordinary input and durable
 entry; qualify connect/continue, truthful activity, stop/recovery and readable
-results; then complete G1's two real collaboration cycles. Prioritize these
+results, including late returns after the active session changes; then complete
+G1's two real collaboration cycles. Entry routing and queue failure fixes are
+prerequisites, not evidence of a complete managed/attached journey. Prioritize these
 before cross-channel visual parity or scale. Lark's reusable inbox lifecycle
 should converge into the existing typed coordination owner, while provider
 authentication/addressing/reactions remain in its extension. Product-facing TS
