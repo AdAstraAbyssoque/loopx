@@ -36,6 +36,13 @@ existing #5054/#4931 and D2/D3 evidence remain separate. This is not a guarantee
 count of future defect repairs.
 [Current inventory, rationale and exits](ledger/shared-goal-authority-state-provider-v0/2026-09-27-recovery-audit.md).
 
+Managed Host supervision lands in the same window as a separate delivered slice:
+one TS supervisor now owns generic command and Codex CLI process lifetimes, so
+authority-bound execution stays open rather than closing here, and the old three
+architectural packages remain a pointer instead of a decrementing PR counter.
+Its named plan, changed estimate and boundaries are recorded separately.
+[Named plan, changed estimate and boundaries](ledger/shared-goal-authority-state-provider-v0/2026-09-27-host-supervision.md).
+
 File retained-state storage now reuses the existing TS checkpoint/delta codec,
 stacked on #5063's verified read cache and RPC budgets. Original revisions,
 receipts and full historical projections survive the physical format upgrade.

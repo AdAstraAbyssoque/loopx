@@ -36,6 +36,11 @@ PR：本次恢复切片、外部执行区间保护、整 Goal 激活/回退集�
 缺失证据另列，不能保证最终缺陷修复数量。
 [当前清单、依据及退出条件](ledger/shared-goal-authority-state-provider-v0/2026-09-27-recovery-audit.zh-CN.md)。
 
+同一窗口另有已交付的进程监督切片：通用命令与 Codex CLI 的进程生命周期改由
+一个 TS supervisor 承担，因此执行中租约约束仍开放，不由本次关闭；旧“三个
+架构包”仍是指针，不是递减 PR 计数器。该切片的逐项计划、估算变化与边界单列。
+[核对的逐项计划、估算变化与边界](ledger/shared-goal-authority-state-provider-v0/2026-09-27-host-supervision.zh-CN.md)。
+
 ## Todo 事件路径退役（2026-09-25）
 
 PR #5054 将原先的事件 writer 捕获方案改为删除这条实验性 Todo 来源。
