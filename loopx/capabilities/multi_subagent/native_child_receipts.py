@@ -24,7 +24,7 @@ from ...rollout_event_log import (
 )
 
 
-SCHEMA_VERSION = "native_subagent_activity_v0"
+NATIVE_SUBAGENT_ACTIVITY_SCHEMA_VERSION = "native_subagent_activity_v0"
 EVENT_KINDS = {
     "decision": "native_child_decision",
     "result": "native_child_result",
@@ -105,7 +105,7 @@ def native_child_activity(
     rejected = sum(row.get("outcome") == "capacity_rejected" for row in ordered)
     host_failed = sum(row.get("outcome") == "host_failed" for row in ordered)
     return {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": NATIVE_SUBAGENT_ACTIVITY_SCHEMA_VERSION,
         "goal_id": goal_id, "agent_id": agent_id,
         "turn_instance_id": turn_instance_id,
         "entrypoint_scope": "host_native_child_tools",
