@@ -118,7 +118,6 @@ failure leaves the generated files untouched.
 
 - [Monorepo Distribution Split v0](monorepo-distribution-split-v0.md)
   ([中文版](monorepo-distribution-split-v0.zh-CN.md))
-  - **RFC status:** Draft.
   - **Delivery on `main`:** Proposal only; tracking [#5072](https://github.com/loopx-project/loopx/issues/5072).
   - **Current boundary:** Keeps one repository; splits the installed wheel into
     `loopx-core`, `loopx-workspace` and `packages/` capability distributions,

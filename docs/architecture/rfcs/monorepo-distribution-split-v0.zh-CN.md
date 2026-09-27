@@ -1,13 +1,14 @@
 # RFC：Monorepo 内的发行物拆分（v0）
 
-- **RFC 状态：** Draft
+- **RFC 状态：** 已接受（仅提案；第 12 节 D1–D4 未决，合并不等于批准）
 - **交付成熟度：** Proposal
 - **作者 / 负责人：** LoopX maintainers
 - **创建：** 2026-09-26
-- **最近规范性修订：** 2026-09-26
-- **实现基线：** `3e443ad7c`
+- **最近规范性修订：** 2026-09-27
+- **实现基线：** `2f3d13ae9`
 - **相关契约：** [TypeScript 控制面迁移 v0](typescript-control-plane-migration-v0.zh-CN.md)、[Extensions 参考](../../reference/extensions.md)、[Capability 目录](../../../loopx/capabilities/README.md)、[总体路线图 v0](loopx-overall-roadmap-v0.zh-CN.md)（S2、S8、S12）、[import 边界测试](../../../tests/architecture/test_control_plane_import_boundaries.py)
 - **跟踪 issue：** [#5072](https://github.com/loopx-project/loopx/issues/5072)
+- **替代 / 关闭：** 无
 - **语言镜像：** [English](monorepo-distribution-split-v0.md)
 
 ## 文档结构与维护约定
@@ -32,20 +33,20 @@
 
 | 事实 | 基线值 |
 | --- | --- |
-| `loopx/*.py` 平铺模块 | 143 个文件，约 7.88 万行 |
-| 顶层 `loopx/chat_*.py` | 37 个 |
+| `loopx/*.py` 平铺模块 | 148 个文件，约 7.98 万行 |
+| 顶层 `loopx/chat_*.py` | 38 个 |
 | 顶层 `loopx/*_goal_mode/` 宿主包 | 9 个 |
-| `loopx/control_plane` / `capabilities` / `extensions` | 约 13.1 万 / 11.5 万 / 4.4 万行，同一包内 |
+| `loopx/control_plane` / `capabilities` / `extensions` | 约 13.0 万 / 11.6 万 / 4.4 万行，同一包内 |
 | 声明的 Python 依赖 | `dependencies = []` |
 | 每次安装的运行前提 | effect runtime 需要 Node.js ≥ 22.22.3 |
 | 内核/CLI/顶层模块 import `loopx.capabilities` | 52 处 |
-| capability 模块 import `loopx.control_plane` | 74 处 |
+| capability 模块 import `loopx.control_plane` | 80 处 |
 | `packages/` 下已独立打包的 extension | 9 个 |
 
 由此产生的具体问题：
 
 - **首次使用过重。** "装包、跑 `loopx dashboard`" 会拉进 chat server、展示层资产和全部 capability 代码，哪怕用户只想对一个 goal 跑 `loopx status`。wheel 单体化时，路线图 S1/S12 的首次使用路径无法变轻。
-- **归属不可发现。** 想找"chat 在哪"的贡献者看到的是 37 个和 `quota.py`、`todos.py` 并排的兄弟文件。模块级 CODEOWNERS 和首轮评审人无法在平铺命名空间上清晰表达。
+- **归属不可发现。** 想找"chat 在哪"的贡献者看到的是 38 个和 `quota.py`、`todos.py` 并排的兄弟文件。模块级 CODEOWNERS 和首轮评审人无法在平铺命名空间上清晰表达。
 - **两套打包惯例并存。** finance、JEV、Obelisk、repo-health 已经用各自的 `pyproject.toml` + `extension.toml` 从 `packages/` 发布，而 33 个内置 capability 仍在内核 wheel 里。新 capability 作者没有规则可依。
 - **顶层增长无上限。** import 边界测试保护 `control_plane` 的入边，但没有任何机制阻止下一批 40 个 `something_*.py` 落在顶层。
 
@@ -79,7 +80,7 @@
 
 ## 4. 现状契约
 
-在 `3e443ad7c` 上审计的事实：
+在 `2f3d13ae9` 上审计的事实：
 
 - `pyproject.toml` 以 `packages.find(include=["loopx*"])` 构建单一发行物 `loopx`，把 TS 源码与 JSON 作为 `loopx.control_plane*` 的 package data 打包，声明五个 console script。
 - `loopx/control_plane/effect_runtime.py` 在首次有副作用调用时探测 Node，并已产出类型化启动诊断 `node_unavailable`；缺口在于安装文档与桌面路径把 Node 当作一切功能的硬前提。
@@ -108,7 +109,7 @@
 tests/architecture/top_level_module_budget.json
 { "schema": "loopx_top_level_module_budget_v0",
   "baseline_commit": "<sha>",
-  "max_top_level_modules": 143,
+  "max_top_level_modules": 148,
   "allowlist": ["__init__.py", "entrypoint.py", "cli.py"] }
 ```
 
@@ -184,7 +185,7 @@ capability 包直接采用现有 `extension.toml` 契约，不做扩展。唯一
 
 | 里程碑 | 交付行为 | 进入门禁 | 退出证据 | 回滚 |
 | --- | --- | --- | --- | --- |
-| M0 | 以当前数量加入预算 fixture 与测试；RFC 索引条目 | 本 RFC 以 Draft 合入 | 预算测试绿；数量钉住 | 删除测试 |
+| M0 | 以当前数量加入预算 fixture 与测试；RFC 索引条目 | 本 RFC 被接受 | 预算测试绿；数量钉住 | 删除测试 |
 | M1 | `loopx/chat_*` → `loopx/chat/` 带 shim；预算调低 | M0 | 第 9 节第 1–2 行 | revert |
 | M2 | `loopx/*_goal_mode` → `loopx/hosts/` 带 shim | M0 | 第 1–2 行 | revert |
 | M3 | `loopx-core` + `loopx-workspace` + meta `loopx` 以预发布发布；Node 按 D1 以 extra 或捆绑交付 | M1、M2；D1 已决 | 第 3–4、7 行 | 撤下预发布 |
@@ -210,6 +211,14 @@ capability 包直接采用现有 `extension.toml` 契约，不做扩展。唯一
 - **已知缺口：** 全部里程碑。
 - **对规范性设计的影响：** 无。
 
+### 2026-09-27 — 合并前按新基线重测
+
+- **基线：** `2f3d13ae9`（rebase 后的 PR 基线；从 RFC 撰写到本次合并之间 `main` 前进了 174 个 commit）。
+- **交付：** 设计未变。第 2 节指标、第 5 节 fixture 示例、第 4 节审计版本与附录 C 各行按新基线重测，使 M0 钉住的是代码树真实拥有的数量。
+- **证据：** 与附录 C E1–E3 相同命令；测得漂移为 `loopx/*.py` 143 → 148、`loopx/chat_*.py` 37 → 38、capability → `control_plane` 的 import 74 → 80、`loopx/*.py` 行数 7.88 万 → 7.98 万。内核侧 capability import 数（E2，52 处）与 `packages/` 数量（9）未变。
+- **已知缺口：** 全部里程碑；D1–D4 仍为未决。
+- **对规范性设计的影响：** 第 2、5 节的预算数字跟随新基线；"随时间只降不升"的决策不变。
+
 ## 附录 B：决策日志
 
 | 日期 | 决策 | 负责人 / 批准 | 备选 | 变更的规范章节 |
@@ -220,9 +229,9 @@ capability 包直接采用现有 `extension.toml` 契约，不做扩展。唯一
 
 | 证据 id | 主张 | 基线 / 环境 | 产物或命令 | 结果 | 隐私 / 有效性边界 |
 | --- | --- | --- | --- | --- | --- |
-| E1 | 143 个顶层模块 | `3e443ad7c` | `ls loopx/*.py \| wc -l` | 143 | 统计文件数，非公开 API |
-| E2 | 52 处内核侧 capability import | `3e443ad7c` | `rg -l "loopx\.capabilities\|from \.\.capabilities\|from \.capabilities" loopx/control_plane loopx/cli_commands loopx/*.py` | 52 | 仅静态 import |
-| E3 | 74 处 capability → control_plane import | `3e443ad7c` | `rg -l control_plane loopx/capabilities` | 74 | 含 docstring；为上界 |
+| E1 | 148 个顶层模块 | `2f3d13ae9` | `ls loopx/*.py \| wc -l` | 148 | 统计文件数，非公开 API |
+| E2 | 52 处内核侧 capability import | `2f3d13ae9` | `rg -l "loopx\.capabilities\|from \.\.capabilities\|from \.capabilities" loopx/control_plane loopx/cli_commands loopx/*.py` | 52 | 仅静态 import |
+| E3 | 80 处 capability → control_plane import | `2f3d13ae9` | `rg -l control_plane loopx/capabilities` | 80 | 含 docstring；为上界 |
 
 ## 附录 D：被拒绝或被取代的备选
 

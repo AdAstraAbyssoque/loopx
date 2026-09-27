@@ -1,13 +1,14 @@
 # RFC: Monorepo Distribution Split (v0)
 
-- **RFC status:** Draft
+- **RFC status:** Accepted, proposal only (open decisions D1–D4 remain unapproved)
 - **Delivery maturity:** Proposal
 - **Authors / owners:** LoopX maintainers
 - **Created:** 2026-09-26
-- **Last normative revision:** 2026-09-26
-- **Implementation baseline:** `3e443ad7c`
+- **Last normative revision:** 2026-09-27
+- **Implementation baseline:** `2f3d13ae9`
 - **Related contracts:** [TypeScript Control-Plane Migration v0](typescript-control-plane-migration-v0.md), [Extensions reference](../../reference/extensions.md), [Capability catalog](../../../loopx/capabilities/README.md), [Overall Roadmap v0](loopx-overall-roadmap-v0.md) (S2, S8, S12), [import-boundary tests](../../../tests/architecture/test_control_plane_import_boundaries.py)
 - **Tracking issue:** [#5072](https://github.com/loopx-project/loopx/issues/5072)
+- **Supersedes / closes:** none
 - **Language mirror:** [中文版](monorepo-distribution-split-v0.zh-CN.md)
 
 ## Document map and maintenance contract
@@ -51,14 +52,14 @@ capability. On the baseline:
 
 | Fact | Baseline value |
 | --- | --- |
-| `loopx/*.py` flat modules | 143 files, ~78.8k lines |
-| `loopx/chat_*.py` modules at top level | 37 |
+| `loopx/*.py` flat modules | 148 files, ~79.8k lines |
+| `loopx/chat_*.py` modules at top level | 38 |
 | `loopx/*_goal_mode/` host packages at top level | 9 |
-| `loopx/control_plane` / `capabilities` / `extensions` | ~131k / ~115k / ~44k lines in one package |
+| `loopx/control_plane` / `capabilities` / `extensions` | ~130k / ~116k / ~44k lines in one package |
 | Declared Python dependencies | `dependencies = []` |
 | Runtime prerequisite for every install | Node.js ≥ 22.22.3 for the effect runtime |
 | Kernel/CLI/top-level modules importing `loopx.capabilities` | 52 |
-| Capability modules importing `loopx.control_plane` | 74 |
+| Capability modules importing `loopx.control_plane` | 80 |
 | Independently packaged extensions already in `packages/` | 9 |
 
 Concrete failures this produces:
@@ -68,7 +69,7 @@ Concrete failures this produces:
   only wants `loopx status` for one goal. The roadmap's first-use journey
   (S1/S12) cannot become light while the wheel is monolithic.
 - **Undiscoverable ownership.** A contributor looking for "where does chat
-  live" finds 37 sibling files next to `quota.py` and `todos.py`. Module-level
+  live" finds 38 sibling files next to `quota.py` and `todos.py`. Module-level
   CODEOWNERS and first-round reviewers cannot be expressed cleanly on a flat
   namespace.
 - **Two packaging conventions.** Finance, JEV, Obelisk and repo-health already
@@ -124,7 +125,7 @@ are optional without a repository-level rule.
 
 ## 4. Current-system contract
 
-Facts audited on `3e443ad7c`:
+Facts audited on `2f3d13ae9`:
 
 - `pyproject.toml` builds one distribution `loopx` with
   `packages.find(include=["loopx*"])`, ships TS sources and JSON as package data
@@ -169,7 +170,7 @@ fixture:
 tests/architecture/top_level_module_budget.json
 { "schema": "loopx_top_level_module_budget_v0",
   "baseline_commit": "<sha>",
-  "max_top_level_modules": 143,
+  "max_top_level_modules": 148,
   "allowlist": ["__init__.py", "entrypoint.py", "cli.py"] }
 ```
 
@@ -267,7 +268,7 @@ qualification or performance claim is made by this RFC.
 
 | Milestone | Shipped behavior | Entry gate | Exit evidence | Rollback |
 | --- | --- | --- | --- | --- |
-| M0 | Budget fixture and test at the current count; RFC index entry | this RFC merged as Draft | budget test green; count pinned | delete test |
+| M0 | Budget fixture and test at the current count; RFC index entry | this RFC accepted | budget test green; count pinned | delete test |
 | M1 | `loopx/chat_*` → `loopx/chat/` with shims; budget lowered | M0 | Section 9 rows 1–2 | revert |
 | M2 | `loopx/*_goal_mode` → `loopx/hosts/` with shims | M0 | rows 1–2 | revert |
 | M3 | `loopx-core` + `loopx-workspace` + meta `loopx` published as pre-release; Node as extra or bundle per D1 | M1, M2; D1 decided | rows 3–4, 7 | unpublish pre-release |
@@ -305,6 +306,22 @@ qualification or performance claim is made by this RFC.
 - **Known gaps:** all milestones.
 - **Effect on normative design:** none.
 
+### 2026-09-27 — Pre-merge re-measurement at the rebased base
+
+- **Baseline:** `2f3d13ae9` (the rebased PR base; `main` advanced 174 commits
+  between the RFC being written and this merge).
+- **Delivered:** no design change. Section 2 metrics, the Section 5 fixture
+  example, the Section 4 audit revision and the Appendix C rows were
+  re-measured at the new base so M0 pins a count the tree actually has.
+- **Evidence:** the same commands as Appendix C E1–E3; measured drift is
+  `loopx/*.py` 143 → 148, `loopx/chat_*.py` 37 → 38, capability →
+  `control_plane` imports 74 → 80, `loopx/*.py` lines 78.8k → 79.8k. The
+  kernel-side capability import count (E2, 52) and the `packages/` count
+  (9) are unchanged.
+- **Known gaps:** all milestones; D1–D4 remain open.
+- **Effect on normative design:** the budget numbers in Sections 2 and 5
+  follow the new base; the decision to lower the count over time is unchanged.
+
 ## Appendix B: Decision log
 
 | Date | Decision | Owner / approval | Alternatives | Normative sections changed |
@@ -315,9 +332,9 @@ qualification or performance claim is made by this RFC.
 
 | Evidence id | Claim | Baseline / environment | Artifact or command | Result | Privacy / validity boundary |
 | --- | --- | --- | --- | --- | --- |
-| E1 | 143 top-level modules | `3e443ad7c` | `ls loopx/*.py \| wc -l` | 143 | counts files, not public API |
-| E2 | 52 kernel-side capability imports | `3e443ad7c` | `rg -l "loopx\.capabilities\|from \.\.capabilities\|from \.capabilities" loopx/control_plane loopx/cli_commands loopx/*.py` | 52 | static imports only |
-| E3 | 74 capability → control_plane imports | `3e443ad7c` | `rg -l control_plane loopx/capabilities` | 74 | includes docs strings; upper bound |
+| E1 | 148 top-level modules | `2f3d13ae9` | `ls loopx/*.py \| wc -l` | 148 | counts files, not public API |
+| E2 | 52 kernel-side capability imports | `2f3d13ae9` | `rg -l "loopx\.capabilities\|from \.\.capabilities\|from \.capabilities" loopx/control_plane loopx/cli_commands loopx/*.py` | 52 | static imports only |
+| E3 | 80 capability → control_plane imports | `2f3d13ae9` | `rg -l control_plane loopx/capabilities` | 80 | includes docs strings; upper bound |
 
 ## Appendix D: Rejected or superseded alternatives
 
