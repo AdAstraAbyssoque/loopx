@@ -7,7 +7,7 @@ import hashlib
 import json
 from typing import Any
 
-from .control_plane.effect_runtime import effect_runtime_result
+from .effect_runtime import effect_runtime_result
 
 
 CHAT_TURN_ACCEPTANCE_REQUEST_SCHEMA = "loopx_chat_turn_acceptance_request_v0"

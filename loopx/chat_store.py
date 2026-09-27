@@ -19,7 +19,7 @@ from .capabilities.steward_executor.allocation import (
 )
 from .chat_event_cache import ChatEventCache
 from .chat_ingress import ChatIngressStore
-from .chat_turn_acceptance import (
+from .control_plane.chat_turn_acceptance import (
     CHAT_TURN_ACCEPTANCE_CAPSULE_SCHEMA,
     AcceptedManagedTurn,
     plan_managed_turn_acceptance,
