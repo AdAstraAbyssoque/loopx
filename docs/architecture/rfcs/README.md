@@ -107,6 +107,13 @@ failure leaves the generated files untouched.
     kernel, hosts, memory, cost, security, operations, research, releases,
     community and adoption. Domain contracts retain their authority gates.
 
+- [App conversations and reusable asynchronous work delivery](app-conversation-and-async-inbox-v0.md)
+  ([中文版](app-conversation-and-async-inbox-v0.zh-CN.md))
+  - **Delivery on `main`:** Conversation-entry repair through existing Chat and explicit typed forms;
+    the full managed/attached App journey is not qualified.
+  - **Current boundary:** App-first conversation continuity, truthful activity,
+    public-safe golden queries and a replacement-first TS async inbox plan.
+
 ## Control-Plane Kernel, State, And Migration
 
 - [Automatic Execution Admission v0](automatic-execution-admission-v0.md)

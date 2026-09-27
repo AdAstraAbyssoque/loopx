@@ -15,13 +15,26 @@
 ---
 
 
-## 当前交付边界（2026-09-25）
+### 产品对话与通用异步 inbox
 
-按 `37bbaec79` 与当前 PR 状态核对：完整来源传输、事务捕获、来源组装及此前五个
-在途 caller/event 修复都已合入，不再计入待开发。当前晋升准入修复之后，规划三个
-明确代码边界：外部动作执行区间保护、事件 writer 绑定与整 Goal 迁移/回退闭环、
-默认启用与最后一批有界 Python 退役。#4931 与 D2 的剩余资格证据单列；三个是
-可命名的开发批次，不是保证总 PR 数。[唯一当前清单与退出条件](ledger/shared-goal-authority-state-provider-v0/2026-09-24-default-cutover-reconciliation.zh-CN.md)。
+R1–R3 的 TS 消费者包括 App 产品路径，不只 CLI 结算。
+[App/inbox 融合设计](app-conversation-and-async-inbox-v0.md#ts-and-generic-async-inbox-migrate-with-the-user-path)
+按调用者修复、行为刻画、完整异步生命周期切换、真实 adapter 恢复与旧代码删除推进。
+复用 Chat ingress、Agent 通用 collaboration 和 operator inbox 的既有 owner；
+将与 Lark 无关的 pending／重放／处理决定规则归入 TS，provider IO、认证与回复格式
+保留在扩展。managed／attached 保持唯一执行驱动与原请求身份。
+首个 App 结果不需要第二份 inbox 存储、逐字段 RPC 或全量重写。
+这里是 T0–T4 的产品消费计划，不新增 provider promotion，也不声称迁移完成。
+
+
+## 当前交付边界（2026-09-27）
+
+按 `157ab7b11` 与当前 PR 核对，来源捕获、分页、File 格式升级及 Python 原型
+退役已交付。本次修复审核输入恢复并增加独立历史审计；从本次开始规划四个交付
+PR：本次恢复切片、外部执行区间保护、整 Goal 激活/回退集成、默认入口及最后
+一批有界 Python 退役。本次之后剩后三个规划范围；#5054/#4931 已有 PR，D2/D3
+缺失证据另列，不能保证最终缺陷修复数量。
+[当前清单、依据及退出条件](ledger/shared-goal-authority-state-provider-v0/2026-09-27-recovery-audit.zh-CN.md)。
 
 ## 旧观测写入退役（2026-09-24）
 

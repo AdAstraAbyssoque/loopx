@@ -15,16 +15,31 @@
 
 ---
 
-## Current delivery frontier (2026-09-25)
+### Product conversations and asynchronous inbox
 
-Audit `37bbaec79` and current PR states: complete-source transport, transaction
-capture, source assembly and the five previously open caller/event fixes are
-merged, not future implementation. After the current promotion-admission repair,
-three named code boundaries remain planned: external-effect execution fencing;
-event-writer binding plus whole-Goal migration/rollback; default onboarding plus
-bounded Python retirement. #4931 and outstanding D2 evidence are tracked
-separately. Three is a delivery plan, not a guaranteed total PR count.
-[Current inventory and exits](ledger/shared-goal-authority-state-provider-v0/2026-09-24-default-cutover-reconciliation.md).
+R1–R3 also consume the typed kernel through the App, not only CLI settlement.
+The [App/inbox integration plan](app-conversation-and-async-inbox-v0.md#ts-and-generic-async-inbox-migrate-with-the-user-path)
+orders caller fixes, characterization, one complete async lifecycle cutover,
+real-adapter recovery and deletion. Reuse Chat ingress, Agent-neutral collaboration
+and operator-inbox owners; extract Lark-independent pending/replay/disposition
+rules while retaining provider IO, authentication and delivery formatting.
+Managed and attached paths preserve one execution driver and existing request
+identity. No second inbox store, per-field bridge expansion or full rewrite is
+required for the first App outcome. These are planned product consumers of
+T0–T4, not additional provider promotion or completed migration claims.
+
+
+## Current delivery frontier (2026-09-27)
+
+Audit `157ab7b11` and current PR states: source capture, pagination, File format
+upgrade and Python prototype retirement are delivered. This delivery repairs
+reviewed-input recovery and adds independent retained-history audit. Plan four
+scoped PRs starting here: this recovery slice, external execution interval
+protection, whole-Goal activation/rollback integration, and default entrypoints
+with final bounded Python retirement. Three planned scopes follow this PR;
+existing #5054/#4931 and D2/D3 evidence remain separate. This is not a guaranteed
+count of future defect repairs.
+[Current inventory, rationale and exits](ledger/shared-goal-authority-state-provider-v0/2026-09-27-recovery-audit.md).
 
 ## Native authority qualification and prototype retirement (2026-09-26)
 

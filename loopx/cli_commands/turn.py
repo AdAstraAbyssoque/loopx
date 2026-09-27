@@ -9,15 +9,9 @@ from pathlib import Path
 from typing import Any
 
 from ..cli_rollout import append_cli_rollout_event
-from ..capabilities.explore.composition_frontier import (
-    project_live_explore_composition_frontier,
-)
-from ..capabilities.agent_turn_recall import (
-    run_configured_agent_turn_recall_fail_open,
-)
-from ..capabilities.reward_memory import (
-    run_configured_turn_outcome_ingest_fail_open,
-)
+from ..capabilities.explore.composition_frontier import project_live_explore_composition_frontier
+from ..capabilities.agent_turn_recall import run_configured_agent_turn_recall_fail_open
+from ..capabilities.reward_memory import run_configured_turn_outcome_ingest_fail_open
 from ..capabilities.periodic_report.cadence_runtime import extend_cadence_turn_start_dispatch
 from ..control_plane.quota.live_decision import build_live_quota_should_run_decision
 from ..control_plane.agents.workspace_guard import capture_delivery_workspace
@@ -25,18 +19,14 @@ from ..control_plane.goals.first_party_host_admission import (
     FirstPartyHostGoalAdmission,
     capture_first_party_host_goal_ref,
 )
-from ..control_plane.quota.heartbeat_receipt import (
-    ensure_turn_heartbeat_settlement_receipt,
-)
+from ..control_plane.quota.heartbeat_receipt import ensure_turn_heartbeat_settlement_receipt
 from ..control_plane.quota.settlement import (
     SettlementIdentity,
     SettlementStepKind,
     read_heartbeat_settlement,
 )
 from ..control_plane.quota.turn_envelope import build_turn_envelope
-from ..control_plane.work_items.autonomous_replan_obligation import (
-    replan_obligation_id_from_packet,
-)
+from ..control_plane.work_items.autonomous_replan_obligation import replan_obligation_id_from_packet
 from ..control_plane.runtime.status_projection_cache import (
     resolve_status_projection_cache_runtime_root,
 )
@@ -54,6 +44,7 @@ from ..control_plane.turn_driver import (
     load_loopx_turn_plan_from_journal,
     run_codex_cli_host,
     run_loopx_turn_once,
+    inspect_loopx_turn_journal,
     selected_turn_todo,
 )
 from ..control_plane.turn_driver.host_binding import managed_executor_binding
@@ -118,6 +109,7 @@ def handle_turn_command(
             output_format=output_format, print_payload=print_payload,
         )
     payload: dict[str, Any] = {}
+    execution_started = False
     try:
         if getattr(args, "todo_id", None) is not None and (
             getattr(args, "resume_turn_key", None)
@@ -1104,6 +1096,7 @@ def handle_turn_command(
                 on_admitted=on_managed_start_admitted,
             )
 
+            execution_started = bool(args.execute)
             payload = run_loopx_turn_once(
                 payload,
                 host_argv=raw_argv,
@@ -1139,7 +1132,20 @@ def handle_turn_command(
         else:
             raise ValueError("turn requires the `plan` or `run-once` subcommand")
     except Exception as exc:  # noqa: BLE001 - CLI boundary renders typed JSON failure
-        payload = build_turn_error_payload(payload, exc, turn_command=args.turn_command)
+        journal_readback = None
+        if execution_started:
+            transaction = payload.get("transaction") or {}
+            try:
+                journal_readback = inspect_loopx_turn_journal(
+                    runtime_root, goal_id=args.goal_id, agent_id=args.agent_id,
+                    turn_key=str(transaction.get("turn_key") or ""),
+                )
+            except Exception:  # noqa: BLE001 - retain original error and unknown effects
+                pass
+        payload = build_turn_error_payload(
+            payload, exc, turn_command=args.turn_command,
+            execution_started=execution_started, journal_readback=journal_readback,
+        )
     renderer = (
         _render_loopx_turn_execution_markdown
         if args.turn_command == "run-once"
