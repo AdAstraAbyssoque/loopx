@@ -499,6 +499,14 @@ coordinators and ordinary members use the same grant contract. Disabled stdio
 servers retain their original five non-executing tools. Configuration files
 compact provider launch arguments without changing default executor selection.
 
+Independent work outside owner-selected acceptance now uses the canonical
+Todo's explicit completion validator through the same TS validation plan.
+Covered work still requires its current owner association and every applicable
+check. Member completion keeps the Goal active, then resumes only the original
+Turn's settlement; it does not assert terminal no-follow-up. File/SQLite CLI
+and local host regressions qualify this boundary, not real-model research,
+requester synthesis or Lark parity. No binding grant or provider is activated.
+
 The [synthetic research example](../../../examples/managed-research-team/README.md)
 uses a local lead, two DSH members and two Ark members. One cloud reviewer adopts
 local analysis; another Ark member delegates to DSH before returning to local

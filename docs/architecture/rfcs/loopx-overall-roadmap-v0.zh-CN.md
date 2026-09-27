@@ -395,6 +395,12 @@ P0 首批是负责人路由和真实 2–3-worker 协调：两轮并行汇合、
 委派逻辑。主协调员与普通成员使用同一授权合同；未启用执行配置的 stdio 服务保持
 原有五个非执行工具。文件形式的 provider 配置缩短启动参数，不改变默认执行器。
 
+owner 所选验收范围外的独立工作，现可通过同一 TS 校验计划使用规范 Todo 显式声明的
+完成校验。范围内仍须具备当前 owner 关联，且所有适用校验都须通过。成员完成保留
+Goal active，再仅恢复原 Turn 的结算，不声明 terminal no-follow-up。File/SQLite CLI
+及本地 host 回归只验收该边界，不代表真实模型投研、请求方综合或 Lark 等价；不激活
+任何 binding grant 或 provider。
+
 [合成投研示例](../../../examples/managed-research-team/README.md)由本地主 Agent
 组织两个 DSH 和两个 Ark 成员：云端核验员采用本地分析，另一 Ark 成员继续委派
 DSH 后向本地主 Agent 返回。五个稳定预授权任务一次绑定精确验收；Turn 验证与普通

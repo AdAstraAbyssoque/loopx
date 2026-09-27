@@ -1,11 +1,58 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {recordDelegationAdoption, delegationInventoryItem, delegationInventoryQuery, delegationPreflight, delegationTurnPlanDecision, recoverValidatedDelegationSettlement, selectDelegationBinding, transitionDelegationObservation} from "../../loopx/control_plane/collaboration/delegation.ts";
+import {recordDelegationAdoption, delegationInventoryItem, delegationInventoryQuery, delegationPreflight, delegationTurnPlanDecision, delegationValidationPlan, recoverValidatedDelegationSettlement, selectDelegationBinding, transitionDelegationObservation} from "../../loopx/control_plane/collaboration/delegation.ts";
+import {canonicalAuthoritySha256} from "../../loopx/control_plane/coordination/authority_store_codec.ts";
 
 const binding = {id: "review", agent_id: "reviewer", todo_id: "todo_review", workspace: "/fixture",
   requesters: ["coordinator", "analyst"], host_args: ["--host", "dsh"], timeout_seconds: 60, output_refs: ["output.json"]};
 const params = {agent_id: "coordinator", binding_id: "review",
   config: {schema_version: "loopx_local_delegation_v0", bindings: [binding]}};
+
+const declaration = {validation_command: null, validation_command_argv: ["node", "validate.ts"],
+  validation_label: "Independent verification", validation_timeout_seconds: 5};
+const validationTodo = {todo_id: binding.todo_id, done: false, status: "open",
+  completion_validation_required: true, completion_validation_sha256: canonicalAuthoritySha256(declaration)};
+const validationBasis = {status: "loaded", provider_revision: "fixture:1", todo: validationTodo,
+  completion_requirements: null};
+
+test("independent delegation requires the current canonical declaration, not a Goal-wide contract", () => {
+  const plan = delegationValidationPlan({binding, basis: validationBasis, declaration});
+  assert.equal(plan.state, "ready");
+  assert.equal(plan.source, "todo_validation");
+  assert.equal(plan.canonical_done, false);
+  assert.deepEqual((plan.effects as Record<string, unknown>[])[0].validation_argv, ["node", "validate.ts"]);
+  const completed = delegationValidationPlan({binding, declaration, basis: {...validationBasis,
+    todo: {...validationTodo, status: "done", done: true}}});
+  assert.equal(completed.state, "ready");
+  assert.equal(completed.canonical_done, true);
+  for (const value of [null, {...declaration, validation_command_argv: ["node", "other.ts"]},
+    {...declaration, validation_command_argv: []}]) {
+    assert.equal(delegationValidationPlan({binding, basis: validationBasis, declaration: value}).state, "unbound");
+  }
+  const undeclared = {...validationBasis, todo: {todo_id: binding.todo_id, status: "open", done: false}};
+  assert.equal(delegationValidationPlan({binding, basis: undeclared, declaration: null}).state, "unbound");
+  assert.throws(() => delegationValidationPlan({binding, basis: undeclared, declaration}), /without canonical/);
+  assert.throws(() => delegationValidationPlan({binding, basis: {...validationBasis,
+    todo: {...validationTodo, todo_id: "other"}}, declaration}), /matching canonical/);
+  assert.throws(() => delegationValidationPlan({binding, basis: {...validationBasis,
+    completion_requirements: undefined}, declaration}));
+});
+
+test("owner acceptance and ordinary Todo validation remain cumulative", () => {
+  const criteria = [{id: "review", description: "Check the result", validation_argv: ["node", "owner.ts"],
+    validation_timeout_seconds: 5, validation_files: [{path: "owner.ts", sha256: "a".repeat(64)}]}];
+  const basis = {...validationBasis, completion_requirements: {todo_id: binding.todo_id, criteria}};
+  const plan = delegationValidationPlan({binding, basis, declaration});
+  assert.equal(plan.source, "goal_acceptance");
+  assert.equal((plan.effects as unknown[]).length, 2);
+  assert.equal(delegationValidationPlan({binding, basis, declaration: null}).state, "unbound");
+  const onlyOwner = {...basis, todo: {todo_id: binding.todo_id, status: "open", done: false}};
+  assert.equal(delegationValidationPlan({binding, basis: onlyOwner, declaration: null}).state, "ready");
+  for (const requirements of [{todo_id: "other", criteria}, {todo_id: binding.todo_id, criteria: []}]) {
+    assert.throws(() => delegationValidationPlan({binding, declaration,
+      basis: {...basis, completion_requirements: requirements}}), /matching owner/);
+  }
+});
 
 test("same explicit grant contract applies to a coordinator and an ordinary member", () => {
   assert.deepEqual(selectDelegationBinding(params), binding);

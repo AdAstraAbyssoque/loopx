@@ -130,7 +130,7 @@ def test_preflight_projects_unavailable_authority_without_turn_or_provider(
             "activation never promotes a provider"
         )
 
-    monkeypatch.setattr(delegation, "inspect_goal_acceptance", unavailable)
+    monkeypatch.setattr(delegation.delegation_validation, "inspect_goal_acceptance", unavailable)
     monkeypatch.setattr(runner, "_cli", lambda *args, **kwargs: calls.append(args))
     result = runner.inspect("analysis")
     assert result["state"] == "authority_unavailable"
@@ -457,7 +457,8 @@ def test_preflight_does_not_call_an_invalidated_acceptance_ready(service):
     assert result["state"] in {"turn_blocked", "acceptance_unavailable"}
 
 
-def test_http_team_readback_uses_original_scope_without_a_new_turn(service):
+@pytest.mark.parametrize("validation_basis", ["goal_acceptance", "independent"])
+def test_http_team_readback_uses_original_scope_without_a_new_turn(service, validation_basis):
     import http.client
     import threading
     from loopx.chat_runtime import ChatRuntimeController
@@ -465,6 +466,10 @@ def test_http_team_readback_uses_original_scope_without_a_new_turn(service):
     from loopx.chat_store import ChatSessionStore
 
     root, runner = service
+    if validation_basis == "independent":
+        from test_independent_delegation_validation import independent_binding
+
+        independent_binding(service)
     from loopx.agent_registry import load_goal_from_registry
     from pathlib import Path
 

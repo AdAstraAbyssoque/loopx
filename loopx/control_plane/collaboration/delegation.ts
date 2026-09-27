@@ -3,12 +3,59 @@
 import type {JsonObject} from "../effect_program.ts";
 import {requireJsonObject} from "../runtime_decode.ts";
 import {EffectRuntimeRequestError} from "../effect_runtime_errors.ts";
+import {canonicalAuthoritySha256} from "../coordination/authority_store_codec.ts";
+import {acceptanceValidationEffects, type AcceptanceCompletionRequirements} from "../goals/acceptance_contract.ts";
+import {normalizeTodoCompletionValidationDeclaration} from "../todos/completion_validation_declaration.ts";
 
 function requireThat(ok: unknown, message: string): asserts ok {
   if (!ok) throw new EffectRuntimeRequestError(message);
 }
 function text(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 && value.length <= 4096;
+}
+
+/** The canonical acceptance reader resolves owner scope before this plan.
+ * A null requirement is out of scope/disabled, never an unbound-task fallback.
+ * Private declarations must match the current Todo authority, also on readback. */
+export function delegationValidationPlan(params: JsonObject): JsonObject {
+  const binding = requireJsonObject(params.binding, "delegation binding");
+  const basis = requireJsonObject(params.basis, "canonical validation basis");
+  const todo = requireJsonObject(basis.todo, "canonical delegation Todo");
+  requireThat(basis.status === "loaded" && text(basis.provider_revision)
+    && todo.todo_id === binding.todo_id, "delegation requires a current matching canonical Todo");
+  requireThat(Object.hasOwn(basis, "completion_requirements"), "canonical acceptance scope required");
+  const requirements = basis.completion_requirements === null ? null
+    : requireJsonObject(basis.completion_requirements, "canonical acceptance requirements");
+  if (requirements !== null) requireThat(requirements.todo_id === todo.todo_id
+    && Array.isArray(requirements.criteria) && requirements.criteria.length > 0,
+  "delegation requires matching owner acceptance criteria");
+  const unavailable = (reason: string) => ({todo_id: todo.todo_id, state: "unbound",
+    source: null, reason, effects: [], canonical_done: false});
+  const effects: JsonObject[] = requirements === null ? []
+    : acceptanceValidationEffects(requirements as AcceptanceCompletionRequirements, todo)
+      .map(row => ({...requireJsonObject(row.effect, "acceptance validation effect"), criterion_id: row.criterion_id}));
+  if (todo.completion_validation_required === true) {
+    if (params.declaration === null) return unavailable("completion_validation_declaration_unavailable");
+    const declaration = requireJsonObject(params.declaration, "private validation declaration");
+    const normalized = normalizeTodoCompletionValidationDeclaration(declaration, {
+      strict_fields: true, require_command: true, require_canonical_input: true,
+    });
+    if (!normalized.ok || canonicalAuthoritySha256(declaration) !== todo.completion_validation_sha256)
+      return unavailable("completion_validation_declaration_mismatch");
+    effects.push({kind: "caller_validation", validation_command: normalized.value.validation_command,
+      validation_argv: normalized.value.validation_command_argv,
+      validation_label: normalized.value.validation_label,
+      validation_timeout_seconds: normalized.value.validation_timeout_seconds,
+      validation_declaration_sha256: todo.completion_validation_sha256,
+      task_repository: todo.task_repository ?? null});
+  } else {
+    requireThat(params.declaration === null && todo.completion_validation_sha256 == null,
+      "Todo without canonical validation authority cannot supply a declaration");
+    if (requirements === null) return unavailable("independent_delegation_validation_required");
+  }
+  return {todo_id: todo.todo_id, state: "ready",
+    source: requirements === null ? "todo_validation" : "goal_acceptance",
+    effects, canonical_done: todo.done === true && todo.status === "done"};
 }
 export function selectDelegationBinding(params: JsonObject): JsonObject {
   const config = requireJsonObject(params.config, "delegation configuration");
