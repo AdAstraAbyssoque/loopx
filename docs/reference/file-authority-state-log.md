@@ -260,6 +260,14 @@ cursor, projection digest, writer-fence digest and destination provider. A
 changed source requires a new reviewed plan. Plans are created exclusively;
 choose a new path instead of overwriting an already-reviewed artifact.
 
+Migration copies complete committed projections, events and original receipts;
+it does not rebuild Todos from display columns or reapply a metadata allowlist.
+Historical metadata values, absent keys, explicit nulls, false, zero and empty
+arrays remain distinct. Auditing excludes only the transaction's physical
+provider revision, which legitimately changes with the backend. It cannot prove
+that an earlier legacy-to-canonical capture included every external field, nor
+does it copy attachment files or independently-owned Host/Turn stores.
+
 Execution shares the maintenance guard used by canonical command writers. It
 saves a verified logical backup below the runtime's
 `authority-transition/local-provider/<plan digest>/`, binds the target identity,

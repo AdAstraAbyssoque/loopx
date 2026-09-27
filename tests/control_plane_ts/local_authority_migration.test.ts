@@ -254,3 +254,42 @@ test("post-publication IO failure reports uncertainty, same-plan retry reads the
   assert.equal((await selected(root, goal)).provider, "sqlite");
   assert.equal((await manage(request(root, p))).status, "already_applied");
 });
+
+test("Todo metadata survives every historical row, including null, false, empty arrays and removed keys", async t => {
+  const root = await fixture(t);
+  const source = (await selected(root, goal)).store;
+  const metadata: JsonObject = {priority: "P1", task_class: "advancement_task", task_domain: "code",
+    required_capabilities: ["shell", "filesystem_write"], required_write_scopes: ["src/**", "tests/**"],
+    target_capabilities: ["coordination_authority"], excluded_agents: [], claimed_by: null,
+    global_gate: false, completion_validation_revision: 0, completion_validation_revision_history: [],
+    note: "保留多行说明\n- 原始 metadata", evidence: "validation://retained-metadata"};
+  for (let i = 0; i < 2; i++) {
+    const head = await source.loadAuthority();
+    if (head.status !== "loaded") throw Error("head");
+    const record = {...(head.head.todos as JsonObject[])[0], ...metadata};
+    if (i === 1) { record.note = null; delete record.evidence; }
+    const projection = authorityProjectionFixture(goal, [record], [], "native", {
+      retained_annotation: {optional: null, count: 0, enabled: false, empty: [], nested: {"中文": "值"}},
+    });
+    const committed = await source.commitAuthority({operation_id: `metadata-${i}`, expected_provider_revision: head.provider_revision,
+      events: [{kind: "metadata_update", note_present: true}], receipts: [{metadata_preserved: true}], next_projection: projection});
+    assert.equal(committed.status, "applied");
+  }
+  const before = await source.scanCommitted(null, 10);
+  if (before.status !== "page") throw Error("history");
+  for (const target of ["sqlite", "file"] as const) {
+    assert.equal((await manage(request(root, await plan(root, target)))).status, "migrated");
+    const after = await (await selected(root, goal)).store.scanCommitted(null, 10);
+    if (after.status !== "page") throw Error("history");
+    assert.deepEqual(after.transactions.map(({provider_revision, ...row}) => row),
+      before.transactions.map(({provider_revision, ...row}) => row));
+    const old = (after.transactions[2].projection.todos as JsonObject[])[0];
+    const current = (after.transactions[3].projection.todos as JsonObject[])[0];
+    for (const [key, value] of Object.entries(metadata)) assert.deepEqual(old[key], value, key);
+    assert.equal(current.note, null);
+    assert.equal(Object.hasOwn(current, "evidence"), false);
+    assert.deepEqual(current.excluded_agents, []);
+    assert.equal(current.global_gate, false);
+    assert.equal(current.completion_validation_revision, 0);
+  }
+});

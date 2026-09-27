@@ -8,7 +8,7 @@ from pathlib import Path
 
 from ..control_plane.effect_runtime import effect_runtime_result
 from ..paths import DEFAULT_RUNTIME_ROOT, global_registry_path, resolve_runtime_root
-from ..history import load_registry
+from ..control_plane.projects.registry_codec import load_registry
 
 
 def register_authority_archive_command(
