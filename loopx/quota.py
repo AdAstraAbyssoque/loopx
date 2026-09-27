@@ -93,7 +93,6 @@ from .control_plane.scheduler.execution_context import (
     SchedulerExecutionContextResolution,
 )
 from .control_plane.scheduler.state import (
-    CODEX_APP_STATEFUL_BACKOFF_STATE_KEY,
     CODEX_APP_SURFACE,
 )
 from .control_plane.todos.contract import (
@@ -984,7 +983,7 @@ def record_quota_scheduler_ack(
     agent_id: str | None = None,
     available_capabilities: Any = None,
     surface: str = CODEX_APP_SURFACE,
-    state_key: str = CODEX_APP_STATEFUL_BACKOFF_STATE_KEY,
+    state_key: str | None = None,
     applied_rrule: str | None = None,
     reset_token: str | None = None,
     identity_signature: str | None = None,
@@ -1023,7 +1022,7 @@ def record_quota_scheduler_ack(
         agent_id=safe_agent_id,
         execute=execute,
         surface=str(surface or CODEX_APP_SURFACE).strip() or CODEX_APP_SURFACE,
-        state_key=str(state_key or CODEX_APP_STATEFUL_BACKOFF_STATE_KEY).strip(),
+        state_key=str(state_key).strip() if state_key is not None else None,
         applied_rrule=applied_rrule,
         reset_token=reset_token,
         identity_signature=identity_signature,

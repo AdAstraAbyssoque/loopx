@@ -26,7 +26,6 @@ from ..control_plane.scheduler.execution_context import (
 )
 from ..control_plane.scheduler.state import (
     APP_AUTOMATION_STATEFUL_BACKOFF_STATE_KEY,
-    CODEX_APP_STATEFUL_BACKOFF_STATE_KEY,
 )
 from ..status import AUTONOMOUS_REPLAN_PERIODIC_LOOKBACK, collect_status
 from ..turn_identity import mint_turn_instance_id, normalize_turn_instance_id
@@ -232,7 +231,7 @@ def validate_quota_command_context_request(
         default_state_key = (
             APP_AUTOMATION_STATEFUL_BACKOFF_STATE_KEY
             if selected_surface == HostSurface.TRAE_APP.value
-            else CODEX_APP_STATEFUL_BACKOFF_STATE_KEY
+            else None
         )
         if (
             selected_surface == HostSurface.TRAE_APP.value
