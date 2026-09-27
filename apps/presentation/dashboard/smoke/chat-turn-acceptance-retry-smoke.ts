@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import {spawn} from "node:child_process";
 import {once} from "node:events";
-import {existsSync} from "node:fs";
 import {resolve} from "node:path";
 import {createInterface} from "node:readline";
 
+import {resolveTestPython} from "../../../../scripts/test-python.mjs";
 import {
   ChatApiError,
   acceptChatTurn,
@@ -84,9 +84,7 @@ async function runHttpRecoveryScenario(
     dashboardRoot,
     "smoke/chat-turn-acceptance-http-fixture.py",
   );
-  const repositoryPython = resolve(repositoryRoot, ".venv/bin/python");
-  const python = process.env.LOOPX_PYTHON
-    ?? (existsSync(repositoryPython) ? repositoryPython : "python3");
+  const python = resolveTestPython({repoRoot: repositoryRoot});
   const child = spawn(
     python,
     ["-u", fixturePath, scenario],
