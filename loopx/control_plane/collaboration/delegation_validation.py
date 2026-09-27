@@ -5,8 +5,6 @@ Python resolves private declarations and executes only those authorized effects.
 No validator output or successful declaration read completes a canonical Todo.
 """
 
-from pathlib import Path
-
 from ...agent_registry import load_goal_from_registry
 from ...materials import goal_state_path
 from ..effect_runtime import effect_runtime_result
