@@ -9,6 +9,7 @@ const drawer = source("./context-drawer.tsx");
 const header = source("./channel-header.tsx");
 const sidebar = source("./goal-sidebar.tsx");
 const actionForm = source("./workspace-action-form.tsx");
+const goalCreateRequest = source("./goal-create-request.ts");
 const page = source("./personal-workspace-page.tsx");
 
 const shell = source("./workspace-shell.tsx");
@@ -356,7 +357,8 @@ assert.doesNotMatch(sidebar, /野兽主题|默认主题/, "The sidebar keeps one
 for (const key of ["proposal.primary.goalCreate", "proposal.impact.goalCreate"]) {
   assert.match(i18n, new RegExp(`"${key.replaceAll(".", "\\.")}"`), `${key} has a typed locale resource`);
 }
-assert.match(actionForm, /workspace_ref:\s*"current"/, "Create Goal does not leak another Goal id as its execution workspace");
+assert.match(actionForm, /goalCreateRequest\(/, "The Create Goal form uses the shared request builder");
+assert.match(goalCreateRequest, /workspace_ref:\s*"current"/, "Create Goal does not leak another Goal id as its execution workspace");
 assert.match(page, /t\("proposal\.workspace\.current"\)/, "Create Goal localizes its execution workspace explanation");
 assert.match(i18n, /Current local workspace \(no Repository bound\)/, "English workspace copy explains that no repository is bound");
 assert.match(i18n, /当前本地工作区（未绑定 Repository）/, "Chinese workspace copy explains that no repository is bound");
