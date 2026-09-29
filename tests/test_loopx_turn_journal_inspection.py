@@ -343,10 +343,14 @@ def test_inspect_journal_cli_branches_before_live_or_write_paths(
         "build_turn_envelope",
         "run_codex_cli_host",
         "run_loopx_turn_once",
-        "spend_quota_slot",
-        "refresh_state_run",
     ):
         monkeypatch.setattr(turn_command, name, unexpected_call)
+    # Execution-only dependencies are imported inside the executing Turn path.
+    # Patch their source modules so this still guards the real delayed imports.
+    from loopx import quota, state_refresh
+
+    monkeypatch.setattr(quota, "spend_quota_slot", unexpected_call)
+    monkeypatch.setattr(state_refresh, "refresh_state_run", unexpected_call)
     # The shared decision owner now performs the live reads this command used to
     # resolve itself, so the guard has to patch them where they live. Patching
     # the old ``turn_command`` names would fail loudly here instead of proving
