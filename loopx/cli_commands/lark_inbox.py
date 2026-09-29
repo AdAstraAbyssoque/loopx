@@ -6,10 +6,11 @@ import shlex
 import sys
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from ..capabilities.issue_fix.provider_hooks import IssueFixReviewerProviderHooks
-from ..capabilities.reward_memory.feedback_hint import build_feedback_review_hint
-from ..capabilities.reward_memory.outbound import outbound_guidance_hook
+if TYPE_CHECKING:
+    from ..capabilities.issue_fix.provider_hooks import IssueFixReviewerProviderHooks
+
 from ..control_plane.capability_hooks import (
     TURN_START_HOOK_RESULT_SCHEMA_VERSION,
     TurnStartHookRegistration,
@@ -46,9 +47,6 @@ from ..extensions.lark.inbox_reactions import (
 from ..extensions.lark.inbox_reply import (
     reply_lark_event_inbox,
     send_lark_inbox_message,
-)
-from ..extensions.lark.reviewer_notification import (
-    lark_reviewer_notification_sink,
 )
 from ..extensions.lark.routed_inbox import (
     acknowledge_routed_lark_event_inbox,
@@ -498,6 +496,12 @@ def dispatch_goal_lark_turn_start_hooks(
 def build_lark_issue_fix_reviewer_provider_hooks(
     *, runtime_root_arg: str | None
 ) -> IssueFixReviewerProviderHooks:
+    # The optional reviewer workflow is not part of Turn admission. Import its
+    # provider only when this Lark route is actually selected; every read-only
+    # Turn preview also constructs the inbox urgency projector from this module.
+    from ..capabilities.issue_fix.provider_hooks import IssueFixReviewerProviderHooks
+    from ..extensions.lark.reviewer_notification import lark_reviewer_notification_sink
+
     activation = resolve_extension_activation(
         LARK_EXTENSION_ID,
         state_file=default_extension_state_file(runtime_root_arg),
@@ -625,6 +629,8 @@ def handle_lark_inbox_command(
                 and not getattr(args, "config", None)
                 and not getattr(args, "project", None)
             ):
+                from ..capabilities.reward_memory.feedback_hint import build_feedback_review_hint
+
                 hint = build_feedback_review_hint(
                     registry_path=registry_path,
                     goal_id=getattr(args, "goal_id", None),
@@ -656,6 +662,8 @@ def handle_lark_inbox_command(
                 execute=args.execute,
             )
         elif args.lark_inbox_command == "reply":
+            from ..capabilities.reward_memory.outbound import outbound_guidance_hook
+
             routed_config = resolve_routed_lark_inbox_config(
                 project=project,
                 config_path=config_path,
@@ -677,6 +685,8 @@ def handle_lark_inbox_command(
                 ),
             )
         elif args.lark_inbox_command == "send":
+            from ..capabilities.reward_memory.outbound import outbound_guidance_hook
+
             routed_config = resolve_routed_lark_inbox_route(
                 project=project,
                 config_path=config_path,

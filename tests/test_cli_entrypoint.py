@@ -259,6 +259,20 @@ assert "loopx.capabilities.content_ops.cli" not in sys.modules
 	assert completed.returncode == 0, completed.stderr
 
 
+def test_turn_handler_import_defers_optional_workflows() -> None:
+	script = """
+import sys
+
+import loopx.cli_commands.turn
+
+assert "loopx.capabilities.agent_turn_recall" not in sys.modules
+assert "loopx.capabilities.reward_memory" not in sys.modules
+assert "loopx.capabilities.issue_fix" not in sys.modules
+"""
+	completed = run_isolated_script(script)
+	assert completed.returncode == 0, completed.stderr
+
+
 def test_selected_parser_matches_full_help_and_diagnostics() -> None:
 	argv_cases = [
 		["check", "--help"],

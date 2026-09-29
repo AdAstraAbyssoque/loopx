@@ -8,11 +8,7 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
-from ..cli_rollout import append_cli_rollout_event
 from ..capabilities.explore.composition_frontier import project_live_explore_composition_frontier
-from ..capabilities.agent_turn_recall import run_configured_agent_turn_recall_fail_open
-from ..capabilities.reward_memory import run_configured_turn_outcome_ingest_fail_open
-from ..capabilities.periodic_report.cadence_runtime import extend_cadence_turn_start_dispatch
 from ..control_plane.quota.live_decision import build_live_quota_should_run_decision
 from ..control_plane.agents.workspace_guard import capture_delivery_workspace
 from ..control_plane.goals.first_party_host_admission import (
@@ -48,10 +44,7 @@ from ..control_plane.turn_driver import (
     selected_turn_todo,
 )
 from ..control_plane.operator_provider import operator_provider_environ
-from ..quota import spend_quota_slot
-from ..state_refresh import refresh_state_run
 from ..todos import resolve_todo_state_path
-from .lark_inbox import dispatch_goal_lark_turn_start_hooks
 from .turn_cadence import managed_cadence_start
 from .turn_decision import (
     build_fresh_turn_decision_owner,
@@ -67,10 +60,6 @@ from .turn_rendering import (
     render_loopx_turn_plan_markdown as _render_loopx_turn_plan_markdown,
 )
 from .turn_selection import managed_executor_cli_binding, resolve_turn_resume_session_binding
-from .turn_todo_writeback import (
-    write_turn_repair_update,
-    write_turn_validated_completion,
-)
 
 EXACT_SETTLEMENT_READBACK_NOT_FOUND = (
     "exact settlement readback unexpectedly returned not-found"
@@ -133,6 +122,18 @@ def handle_turn_command(
         # Only an executing wake may sync inboxes or reserve a calendar window.
         turn_start_hook_dispatch = {}
         if args.turn_command == "run-once" and args.execute:
+            from ..cli_rollout import append_cli_rollout_event
+            from ..capabilities.agent_turn_recall import run_configured_agent_turn_recall_fail_open
+            from ..capabilities.reward_memory import run_configured_turn_outcome_ingest_fail_open
+            from ..capabilities.periodic_report.cadence_runtime import extend_cadence_turn_start_dispatch
+            from ..quota import spend_quota_slot
+            from ..state_refresh import refresh_state_run
+            from .lark_inbox import dispatch_goal_lark_turn_start_hooks
+            from .turn_todo_writeback import (
+                write_turn_repair_update,
+                write_turn_validated_completion,
+            )
+
             turn_start_hook_dispatch = dispatch_goal_lark_turn_start_hooks(
                 registry_path=registry_path,
                 runtime_root_arg=runtime_root,
