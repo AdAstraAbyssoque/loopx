@@ -18,7 +18,7 @@ appendix may keep dated history, but no dated log heading may precede it.
 
 [中文版](STATUS.zh-CN.md) is the semantic mirror of this file.
 
-## Accepted (41)
+## Accepted (42)
 
 | RFC | Header status | Supersedes / closes | Ledger |
 | --- | --- | --- | --- |
@@ -57,6 +57,7 @@ appendix may keep dated history, but no dated log heading may precede it.
 | [RFC: Provider-side authorization at effect acceptance (v0)](provider-effect-acceptance-v0.md) | Accepted | none | — |
 | [RFC: Provider-Neutral Post-Writeback Capability Hooks v0](provider-neutral-post-writeback-capability-hooks-v0.md) | Accepted | none | — |
 | [RFC: Provider-Neutral Turn-Start Inbox Hook v0](provider-neutral-turn-start-inbox-hook-v0.md) | Accepted | none | — |
+| [RFC: Quota Action Authority (v0)](quota-action-authority-v0.md) | Accepted | none | — |
 | [RFC: Research Exploration Control Plane v0](research-exploration-control-plane-v0.md) | Accepted | none | — |
 | [RFC: Semantic Vocabulary Convergence and Commit-Time Drift Checks (v0)](semantic-vocabulary-convergence-v0.md) | Accepted | none | [5 entries](ledger/semantic-vocabulary-convergence-v0/) |
 | [RFC: Shared Goal Alignment and Governed Amendment Protocol (v0)](shared-goal-alignment-and-governed-amendment-v0.md) | Accepted | none | [2 entries](ledger/shared-goal-alignment-and-governed-amendment-v0/) |

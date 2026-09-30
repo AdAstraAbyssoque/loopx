@@ -116,6 +116,14 @@ failure leaves the generated files untouched.
 
 ## Control-Plane Kernel, State, And Migration
 
+- [Quota Action Authority v0](quota-action-authority-v0.md)
+  ([中文版](quota-action-authority-v0.zh-CN.md))
+  - **Delivery on `main`:** Design only; final action projection and bounded
+    canonical claim retry remain unimplemented.
+  - **Current boundary:** Unifies action-bearing quota output while preserving
+    recommendation, Turn binding, execution admission and receipt recovery.
+    Includes contention evidence and ROI; no ranking or provider default change.
+
 - [Monorepo Distribution Split v0](monorepo-distribution-split-v0.md)
   ([中文版](monorepo-distribution-split-v0.zh-CN.md))
   - **Delivery on `main`:** Proposal only; tracking [#5072](https://github.com/loopx-project/loopx/issues/5072).

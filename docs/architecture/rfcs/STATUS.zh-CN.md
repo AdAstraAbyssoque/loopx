@@ -15,7 +15,7 @@
 
 [English](STATUS.md) 与本文互为语义镜像。
 
-## 已接受 (41)
+## 已接受 (42)
 
 | RFC | 头部状态 | 替代 / 关闭 | Ledger |
 | --- | --- | --- | --- |
@@ -54,6 +54,7 @@
 | [RFC：Provider 在效果接受点执行授权（v0）](provider-effect-acceptance-v0.zh-CN.md) | 已接受 | 无 | — |
 | [RFC：Provider-Neutral Post-Writeback Capability Hooks v0](provider-neutral-post-writeback-capability-hooks-v0.zh-CN.md) | 已接受 | 无 | — |
 | [RFC: Provider-Neutral Turn-Start Inbox Hook v0](provider-neutral-turn-start-inbox-hook-v0.md) | 已接受 | none | — |
+| [RFC：Quota 动作权威（v0）](quota-action-authority-v0.zh-CN.md) | 已接受 | 无 | — |
 | [RFC：研究型探索控制面 v0](research-exploration-control-plane-v0.zh-CN.md) | 已接受 | 无 | — |
 | [RFC：语义词表收敛与提交期漂移检查（v0）](semantic-vocabulary-convergence-v0.zh-CN.md) | 已接受 | 无 | [5 条](ledger/semantic-vocabulary-convergence-v0/) |
 | [RFC：共享 Goal 对齐与受治理 Amendment 协议（v0）](shared-goal-alignment-and-governed-amendment-v0.zh-CN.md) | 已接受 | 无 | [2 条](ledger/shared-goal-alignment-and-governed-amendment-v0/) |
