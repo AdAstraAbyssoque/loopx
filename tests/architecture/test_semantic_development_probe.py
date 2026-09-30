@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -344,6 +345,11 @@ def probe_cli(repository: Path) -> Path:
 
 
 def _run_probe_cli(repository: Path) -> subprocess.CompletedProcess[str]:
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if not key.startswith(("COVERAGE", "COV_CORE", "PYTEST"))
+    }
     return subprocess.run(
         [
             sys.executable,
@@ -355,6 +361,7 @@ def _run_probe_cli(repository: Path) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         text=True,
         check=False,
+        env=environment,
     )
 
 
