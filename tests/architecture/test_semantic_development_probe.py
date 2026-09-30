@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -344,6 +345,13 @@ def probe_cli(repository: Path) -> Path:
 
 
 def _run_probe_cli(repository: Path) -> subprocess.CompletedProcess[str]:
+    # pytest-cov injects subprocess startup variables. The synthetic checkout
+    # must not contribute temporary source paths to real CI.
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if not key.startswith(("PYTEST", "COVERAGE", "COV_CORE"))
+    }
     return subprocess.run(
         [
             sys.executable,
@@ -352,6 +360,7 @@ def _run_probe_cli(repository: Path) -> subprocess.CompletedProcess[str]:
             "HEAD",
         ],
         cwd=repository,
+        env=env,
         capture_output=True,
         text=True,
         check=False,
