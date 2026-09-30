@@ -192,7 +192,7 @@ class CompletedTodoRequestMixin:
             def load():
                 payload = list_goal_todos(
                     registry_path=self.server.registry_path, goal_id=goal_id,
-                    role="agent", status="done",
+                    role="agent", status="done", read_scope="completed_history",
                     runtime_root_arg=self.server.runtime_root_override,
                 )
                 ordered = sorted(enumerate(payload["todos"]), key=lambda pair: (str(pair[1].get("completed_at") or ""), pair[0]), reverse=True)
