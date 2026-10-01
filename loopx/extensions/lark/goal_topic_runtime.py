@@ -747,7 +747,12 @@ def answer_lark_goal_topic(
                     sender_id=str(route["source_sender_id"]),
                     message=message,
                     source_id="lark:" + str(route["message_id"]),
-                    source_message=str(text or "").strip(),
+                    # Preserve the same exact-source observation for the receiver;
+                    # the provider prompt and unrelated recent materials stay out.
+                    source_message=(
+                        (reply_context + "\n\nUser message:\n" if reply_context else "")
+                        + str(text or "").strip()
+                    ),
                 )
             turn, _created = runtime_controller.enqueue_turn(
                 session_id=session_id,
