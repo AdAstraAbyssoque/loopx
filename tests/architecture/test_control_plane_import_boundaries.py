@@ -264,6 +264,67 @@ def test_read_adapters_do_not_load_writeback_facades_for_leaf_helpers() -> None:
         assert completed.returncode == 0, completed.stderr
 
 
+def test_turn_preview_import_does_not_select_report_delivery_or_lark_hosts() -> None:
+    # A fresh process detects eager package facades and command-only imports;
+    # the in-process test suite may already have selected these real owners.
+    completed = subprocess.run(
+        [sys.executable, "-c", "\n".join((
+            "import sys",
+            "import loopx.cli_commands.turn_decision",
+            "unselected = (",
+            " 'loopx.capabilities.periodic_report.archive',",
+            " 'loopx.capabilities.periodic_report.workspace',",
+            " 'loopx.presentation.renderers.periodic_report_html',",
+            " 'loopx.presentation.renderers.periodic_report_markdown',",
+            " 'loopx.extensions.hook_adapters',",
+            " 'loopx.extensions.lark.presentation.periodic_report',",
+            " 'loopx.extensions.lark.event_collector_runtime',",
+            " 'loopx.extensions.lark.event_collector_routes',",
+            " 'loopx.extensions.lark.group_history',",
+            " 'loopx.extensions.lark.inbox_reactions',",
+            " 'loopx.extensions.lark.inbox_reply',",
+            " 'loopx.extensions.lark.turn_start_sync',",
+            ")",
+            "assert not set(unselected) & sys.modules.keys(), "
+            "set(unselected) & sys.modules.keys()",
+        ))],
+        cwd=REPOSITORY_ROOT, capture_output=True, check=False, text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_lazy_report_and_lark_exports_preserve_original_owner_identity() -> None:
+    # Compatibility includes from-imports, attribute access, dir(), star
+    # exports for report facades, and the existing Lark command patch seam.
+    reports = importlib.import_module("loopx.capabilities.periodic_report")
+    renderers = importlib.import_module("loopx.presentation.renderers")
+    lark_reports = importlib.import_module("loopx.extensions.lark.presentation")
+    lark_commands = importlib.import_module("loopx.cli_commands.lark_inbox")
+    assert set(reports._EXPORTS) == set(reports.__all__)
+    assert set(renderers._EXPORTS) == set(renderers.__all__)
+    for facade, exports, package in (
+        (reports, reports._EXPORTS, reports.__name__),
+        (renderers, renderers._EXPORTS, renderers.__name__),
+        (lark_reports, dict.fromkeys(lark_reports.__all__, "periodic_report"),
+         lark_reports.__name__),
+        (lark_commands, lark_commands._LAZY_HOST_EXPORTS, "loopx.extensions.lark"),
+    ):
+        assert set(exports) <= set(dir(facade))
+        for name, owner in exports.items():
+            original = getattr(importlib.import_module(f"{package}.{owner}"), name)
+            assert getattr(facade, name) is original
+        try:
+            getattr(facade, "not_a_report_or_lark_export")
+        except AttributeError:
+            pass
+        else:
+            raise AssertionError("unknown exports must retain AttributeError")
+    star_exports: dict[str, object] = {}
+    exec("from loopx.capabilities.periodic_report import *", star_exports)
+    for name in reports.__all__:
+        assert star_exports[name] is getattr(reports, name)
+
+
 def test_core_does_not_import_experiments() -> None:
     forbidden_edges = {
         (_module_name(path), dependency)
@@ -448,13 +509,18 @@ def test_lark_inbox_provider_is_owned_by_the_extension_layer() -> None:
     assert not remaining_legacy_imports
 
     imports = _resolved_imports(LARK_INBOX_CLI_MODULE)
+    lark_commands = importlib.import_module("loopx.cli_commands.lark_inbox")
+    delayed_owner_imports = {
+        f"loopx.extensions.lark.{owner}"
+        for owner in lark_commands._LAZY_HOST_EXPORTS.values()
+    }
     assert {
         "loopx.extensions.lark.event_collector",
         "loopx.extensions.lark.event_collector_runtime",
         "loopx.extensions.lark.event_inbox",
         "loopx.extensions.lark.inbox_reply",
         "loopx.extensions.runtime",
-    } <= imports
+    } <= imports | delayed_owner_imports
     assert (LARK_EXTENSION_ROOT / "extension.toml").is_file()
     assert (LARK_EXTENSION_ROOT / "provider.py").is_file()
 

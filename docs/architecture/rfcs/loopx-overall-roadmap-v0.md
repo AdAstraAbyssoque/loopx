@@ -585,6 +585,10 @@ The existing rolling-slot ledger read functions are also isolated from spend/
 void commit adapters with identity-preserving legacy exports; DSH execution and
 managed-step adapters load only on their selected routes. This is dependency
 isolation, not a new quota decision owner or a relaxed completion gate.
+The same read-preview boundary now delays report generation/discovery and
+unselected Lark outbound, collector and turn-start sync imports. Report,
+renderer and Lark compatibility exports resolve to the original owner objects;
+selected consumption/provider paths retain their existing checks and effects.
 The next S2/S10 cost boundary is the pinned canonical-preview process and source
 loading, not a second planner or authoritative cache; sustained R2 qualification
 remains open until the original callers and frozen acceptance are demonstrated.
@@ -593,6 +597,9 @@ remains open until the original callers and frozen acceptance are demonstrated.
 现有滚动扣额账本的读函数也与 spend/void 提交适配器隔离，保留旧路径的对象
 身份；DSH 执行与 managed-step 仅在选中路由加载。这只是依赖隔离，不另建
 扣额决策源，也不放松完成门禁。
+同一只读预览边界也延后报告生成/扩展发现，以及未选中的 Lark 发送、采集器与
+Turn 启动同步依赖；报告、渲染器及 Lark 兼容导出仍指向原 owner 对象，实际选中
+的消费/提供方路径保留原检查和副作用。
 RPC/导入减少不等于冷/热延迟或全套预算达标。下一步测量固定源码的真实 Turn
 预览进程与加载成本，不能另建规划器或权威缓存；原调用方与既定验收未证明前，
 持续运行的 R2 验收仍开放。

@@ -10,8 +10,6 @@ from pathlib import Path
 from typing import Any
 
 from ...agent_registry import registered_agent_ids_for_goal
-from ...extensions.hook_adapters import discover_extension_hook_adapters
-from ...extensions.runtime import default_extension_state_file
 from ...file_lock import exclusive_file_lock
 from ...history import load_registry
 from ...registry import atomic_write_json, find_registry_goal
@@ -135,6 +133,9 @@ def discover_periodic_report_request_ports(
     agent_id: str,
     extension_state_file: Path | None = None,
 ) -> PeriodicReportRequestPorts:
+    from ...extensions.hook_adapters import discover_extension_hook_adapters
+    from ...extensions.runtime import default_extension_state_file
+
     discovery = discover_extension_hook_adapters(
         state_file=(extension_state_file or default_extension_state_file(runtime_root)),
         phase=REQUEST_ADAPTER_PHASE,
