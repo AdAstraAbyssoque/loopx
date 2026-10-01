@@ -22,7 +22,6 @@ from ...registry import (
     atomic_write_json,
     find_registry_goal,
 )
-from ...todos import add_goal_todo
 from ...file_lock import LockAcquisitionPolicy, exclusive_file_lock
 from ...presentation.renderers.periodic_report_html import render_periodic_report_html
 from ...presentation.renderers.periodic_report_markdown import (
@@ -1352,6 +1351,8 @@ def _consume_pending_periodic_report_intent(
         path=publication_candidate_path,
         candidate=publication_candidate,
     )
+    from ...todos import add_goal_todo
+
     delivery = add_goal_todo(
         registry_path=registry_path,
         goal_id=goal_id,

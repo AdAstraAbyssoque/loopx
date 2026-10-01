@@ -341,10 +341,11 @@ def test_inspect_journal_cli_branches_before_live_or_write_paths(
         "build_live_quota_should_run_decision",
         "build_loopx_turn_plan",
         "build_turn_envelope",
-        "run_codex_cli_host",
-        "run_loopx_turn_once",
     ):
         monkeypatch.setattr(turn_command, name, unexpected_call)
+    monkeypatch.setattr(executor, "run_loopx_turn_once", unexpected_call)
+    from loopx.control_plane.turn_driver import codex_cli
+    monkeypatch.setattr(codex_cli, "run_codex_cli_host", unexpected_call)
     # Execution-only dependencies are imported inside the executing Turn path.
     # Patch their source modules so this still guards the real delayed imports.
     from loopx import quota, state_refresh

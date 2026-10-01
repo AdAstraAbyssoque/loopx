@@ -3189,7 +3189,7 @@ def test_turn_run_once_cli_uses_built_in_codex_host_and_typed_writeback(
             "summary": "One public fixture advanced.",
         }
 
-    monkeypatch.setattr("loopx.cli_commands.turn.run_codex_cli_host", fake_codex_host)
+    monkeypatch.setattr("loopx.control_plane.turn_driver.codex_cli.run_codex_cli_host", fake_codex_host)
     monkeypatch.setattr(
         "loopx.cli_commands.turn.build_turn_envelope",
         adaptive_turn_envelope,
@@ -3349,7 +3349,7 @@ def test_turn_run_once_codex_cli_wires_validated_reflection_post_settlement(
         }
 
     monkeypatch.setattr(
-        "loopx.cli_commands.turn.run_codex_cli_host",
+        "loopx.control_plane.turn_driver.codex_cli.run_codex_cli_host",
         fake_codex_host,
     )
     monkeypatch.setattr(
@@ -3451,11 +3451,11 @@ def test_turn_run_once_cli_resumes_session_from_recoverable_failed_turn(
         }
 
     monkeypatch.setattr(
-        "loopx.cli_commands.turn.codex_cli_session_binding",
+        "loopx.control_plane.turn_driver.codex_cli.codex_cli_session_binding",
         fake_session_binding,
     )
     monkeypatch.setattr(
-        "loopx.cli_commands.turn.run_codex_cli_host",
+        "loopx.control_plane.turn_driver.codex_cli.run_codex_cli_host",
         fake_codex_host,
     )
     argv = [

@@ -564,7 +564,7 @@ def build_live_quota_should_run_decision(
         # must not fall back to the earlier compact status projection and lose
         # the obligation that caused the deferral.
         # Keep the complete snapshot internal; presentation is bounded later.
-        from ...todos import list_goal_todos
+        from ..todos.list_readback import list_goal_todos
 
         source = list_goal_todos(
             registry_path=registry_path, runtime_root_arg=str(runtime_root), goal_id=goal_id,

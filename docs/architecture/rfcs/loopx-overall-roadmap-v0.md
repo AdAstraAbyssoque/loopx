@@ -574,6 +574,22 @@ bounded R2 recovery slice, not runtime provisioning or G1 completion; caller
 admission, fresh task derivation and frontend/Lark qualification remain open.
 中文：异常读回区分本次调用未知副作用与原 Turn 的持久观察/待核对效果，只完成
 R2 的一个恢复切片；调用方准入、新任务生成与前端/Lark 验收仍未闭环。
+
+Draft [PR #5283](https://github.com/loopx-project/loopx/pull/5283) reduces
+preview overhead without replacing that Turn: summary and succession validation
+share the existing TS owner request, empty succession rows skip transport, and
+read adapters no longer require mutation facades. Full provider reads, counts,
+ordering, freshness and current acceptance checks remain required. Fewer RPCs
+or imports do not qualify cold/warm latency or the whole-suite validation budget.
+The next S2/S10 cost boundary is the pinned canonical-preview process and source
+loading, not a second planner or authoritative cache; sustained R2 qualification
+remains open until the original callers and frozen acceptance are demonstrated.
+中文：草稿 #5283 合并同一 TS owner 的摘要/继承验证请求、跳过空行传输并隔离
+只读与写入依赖；不减少完整源读取，也不改计数、排序、新鲜度与当前验收。
+RPC/导入减少不等于冷/热延迟或全套预算达标。下一步测量固定源码的真实 Turn
+预览进程与加载成本，不能另建规划器或权威缓存；原调用方与既定验收未证明前，
+持续运行的 R2 验收仍开放。
+
 The same owner-local panel now opens current validated artifact text and its
 version/source identifiers, accepts feedback through the original coordinator
 inbox and exposes coordinator pause with its actual scope. Stale reads clear prior

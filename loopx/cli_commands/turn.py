@@ -34,17 +34,11 @@ from ..control_plane.todos.durable_completion import (
     read_persisted_todo_record_with_source,
 )
 from ..control_plane.turn_driver import (
-    build_loopx_turn_command_validator,
     build_loopx_turn_plan,
-    codex_cli_session_binding,
     load_loopx_turn_plan_from_journal,
-    run_codex_cli_host,
-    run_loopx_turn_once,
-    inspect_loopx_turn_journal,
     selected_turn_todo,
 )
 from ..control_plane.operator_provider import operator_provider_environ
-from ..todos import resolve_todo_state_path
 from .turn_cadence import managed_cadence_start
 from .turn_decision import (
     build_fresh_turn_decision_owner,
@@ -190,6 +184,8 @@ def handle_turn_command(
             and not args.resume_turn_key
             and turn_envelope.get("effective_action") != EffectiveAction.GOVERNED_CAPABILITY_INTENT.value
         ):
+            from ..control_plane.turn_driver.codex_cli import codex_cli_session_binding
+
             session_binding = (
                 codex_cli_session_binding(
                     runtime_root,
@@ -268,6 +264,12 @@ def handle_turn_command(
                 if isinstance(transaction, dict):
                     transaction.pop("settlement_plan", None)
         elif args.turn_command == "run-once":
+            from ..control_plane.turn_driver.executor import (
+                build_loopx_turn_command_validator,
+                inspect_loopx_turn_journal,
+                run_loopx_turn_once,
+            )
+
             if args.resume_turn_key:
                 if args.turn_instance_id:
                     raise ValueError(
@@ -539,6 +541,8 @@ def handle_turn_command(
                 return refresh
 
             def completion_intent(_result: dict[str, object]) -> dict[str, object]:
+                from ..todos import resolve_todo_state_path
+
                 todo_id = str(selected_todo.get("todo_id") or "")
                 if not todo_id:
                     raise ValueError(
@@ -735,6 +739,8 @@ def handle_turn_command(
                 return spent
 
             def completion_readback() -> dict[str, object] | None:
+                from ..todos import resolve_todo_state_path
+
                 todo_id = str(selected_todo.get("todo_id") or "")
                 if not todo_id:
                     return None
@@ -761,6 +767,8 @@ def handle_turn_command(
                     return None
 
             def terminal_completion_readback() -> dict[str, object] | None:
+                from ..todos import resolve_todo_state_path
+
                 todo_id = str(selected_todo.get("todo_id") or "")
                 if not todo_id:
                     raise ValueError("terminal completion requires one selected Todo")
@@ -1012,6 +1020,8 @@ def handle_turn_command(
                             source_route=getattr(args, "codex_operation_source_route_json", None),
                             **options
                         )
+                    from ..control_plane.turn_driver.codex_cli import run_codex_cli_host
+
                     return run_codex_cli_host(request, **options)
 
                 host_runner = run_built_in_host
@@ -1019,6 +1029,8 @@ def handle_turn_command(
                 def resolve_built_in_session_binding(
                     turn_envelope: Mapping[str, Any],
                 ) -> dict[str, str] | None:
+                    from ..control_plane.turn_driver.codex_cli import codex_cli_session_binding
+
                     return (
                         codex_cli_session_binding(
                             runtime_root,

@@ -65,7 +65,7 @@ def _bound_todo_item(
         return None
     # Reuse the exact-ID read path: presentation lanes omit terminal and
     # blocked rows and cannot prove the absence of a lifecycle transition.
-    from ...todos import list_goal_todos
+    from ..todos.list_readback import list_goal_todos
 
     readback = list_goal_todos(
         registry_path=registry_path,
@@ -268,7 +268,7 @@ def apply_receipt_bound_wait_recovery(
     scheduler_execution_context: Mapping[str, Any] | SchedulerExecutionContextResolution | None,
 ) -> bool:
     """Read full provider facts only when a replay lost its executable binding."""
-    from ...todos import list_goal_todos
+    from ..todos.list_readback import list_goal_todos
     from ..runtime.time import now_utc_iso
 
     source = list_goal_todos(

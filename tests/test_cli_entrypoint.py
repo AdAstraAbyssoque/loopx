@@ -273,6 +273,32 @@ import loopx.cli_commands.turn
 assert "loopx.capabilities.agent_turn_recall" not in sys.modules
 assert "loopx.capabilities.reward_memory" not in sys.modules
 assert "loopx.capabilities.issue_fix" not in sys.modules
+assert "loopx.todos" not in sys.modules
+assert "loopx.control_plane.todos.provider_update" not in sys.modules
+assert "loopx.control_plane.todos.provider_create" not in sys.modules
+assert "loopx.control_plane.turn_driver.executor" not in sys.modules
+"""
+	completed = run_isolated_script(script)
+	assert completed.returncode == 0, completed.stderr
+
+
+def test_turn_facade_preserves_every_export_owner_identity() -> None:
+	script = """
+from importlib import import_module
+import sys
+import loopx.control_plane.turn_driver as facade
+
+assert "loopx.control_plane.turn_driver.executor" not in sys.modules
+for name in facade.__all__:
+    value = getattr(facade, name)
+    owner = import_module("." + facade._EXPORTS[name], facade.__name__)
+    assert value is getattr(owner, name), name
+    assert name in dir(facade)
+from loopx import todos, state_refresh
+from loopx.control_plane.todos.list_readback import list_goal_todos
+from loopx.control_plane.goals.state_resolution import resolve_goal_state
+assert todos.list_goal_todos is list_goal_todos
+assert state_refresh.resolve_goal_state is resolve_goal_state
 """
 	completed = run_isolated_script(script)
 	assert completed.returncode == 0, completed.stderr
