@@ -284,6 +284,12 @@ def test_turn_preview_import_does_not_select_report_delivery_or_lark_hosts() -> 
             " 'loopx.extensions.lark.inbox_reactions',",
             " 'loopx.extensions.lark.inbox_reply',",
             " 'loopx.extensions.lark.turn_start_sync',",
+            " 'loopx.extensions.lark.event_collector',",
+            " 'loopx.extensions.lark.routed_inbox',",
+            " 'loopx.extensions.runtime',",
+            " 'loopx.extensions.manifest',",
+            " 'loopx.extensions.process_runtime',",
+            " 'loopx.extensions.runtime_location',",
             ")",
             "assert not set(unselected) & sys.modules.keys(), "
             "set(unselected) & sys.modules.keys()",
@@ -302,16 +308,36 @@ def test_lazy_report_and_lark_exports_preserve_original_owner_identity() -> None
     lark_commands = importlib.import_module("loopx.cli_commands.lark_inbox")
     assert set(reports._EXPORTS) == set(reports.__all__)
     assert set(renderers._EXPORTS) == set(renderers.__all__)
+    # Independently pin the former eager exports, rather than allowing a
+    # missing compatibility name to disappear from a self-reported map.
+    for owner, names in (
+        ("loopx.extensions.lark.event_inbox", (
+            "acknowledge_lark_event_inbox", "inspect_lark_event_inbox",
+            "lark_event_inbox_contains_text",
+        )),
+        ("loopx.extensions.lark.routed_inbox", (
+            "acknowledge_routed_lark_event_inbox", "ingest_routed_lark_event_inbox",
+            "inspect_routed_lark_event_inbox", "project_routed_lark_event_inbox_urgency",
+            "resolve_routed_lark_inbox_config", "resolve_routed_lark_inbox_route",
+            "settle_routed_lark_event_inbox_material_review",
+        )),
+        ("loopx.extensions.runtime", (
+            "default_extension_state_file", "resolve_extension_activation",
+        )),
+    ):
+        for name in names:
+            assert lark_commands._LAZY_HOST_EXPORTS[name] == owner
     for facade, exports, package in (
         (reports, reports._EXPORTS, reports.__name__),
         (renderers, renderers._EXPORTS, renderers.__name__),
         (lark_reports, dict.fromkeys(lark_reports.__all__, "periodic_report"),
          lark_reports.__name__),
-        (lark_commands, lark_commands._LAZY_HOST_EXPORTS, "loopx.extensions.lark"),
+        (lark_commands, lark_commands._LAZY_HOST_EXPORTS, ""),
     ):
         assert set(exports) <= set(dir(facade))
         for name, owner in exports.items():
-            original = getattr(importlib.import_module(f"{package}.{owner}"), name)
+            module = f"{package}.{owner}" if package else owner
+            original = getattr(importlib.import_module(module), name)
             assert getattr(facade, name) is original
         try:
             getattr(facade, "not_a_report_or_lark_export")
@@ -323,6 +349,31 @@ def test_lazy_report_and_lark_exports_preserve_original_owner_identity() -> None
     exec("from loopx.capabilities.periodic_report import *", star_exports)
     for name in reports.__all__:
         assert star_exports[name] is getattr(reports, name)
+
+
+def test_inert_lark_projector_does_not_load_routes_before_activation(tmp_path) -> None:
+    completed = subprocess.run(
+        [sys.executable, "-c", "\n".join((
+            "import sys",
+            "from loopx.cli_commands.lark_inbox import "
+            "build_lark_operator_inbox_urgency_projector",
+            "projector = build_lark_operator_inbox_urgency_projector("
+            "runtime_root_arg=sys.argv[1])",
+            "assert 'loopx.extensions.runtime' not in sys.modules",
+            "assert 'loopx.extensions.lark.routed_inbox' not in sys.modules",
+            "try:",
+            " projector(project=sys.argv[1], config_path='unreadable-private.json')",
+            "except ValueError as error:",
+            " assert 'not installed' in str(error), str(error)",
+            "else:",
+            " raise AssertionError('uninstalled extension must still refuse')",
+            "assert 'loopx.extensions.runtime' in sys.modules",
+            "assert 'loopx.extensions.lark.routed_inbox' not in sys.modules",
+            "assert 'loopx.extensions.lark.event_collector' not in sys.modules",
+        )), str(tmp_path)],
+        cwd=REPOSITORY_ROOT, capture_output=True, check=False, text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
 
 
 def test_core_does_not_import_experiments() -> None:
@@ -510,10 +561,7 @@ def test_lark_inbox_provider_is_owned_by_the_extension_layer() -> None:
 
     imports = _resolved_imports(LARK_INBOX_CLI_MODULE)
     lark_commands = importlib.import_module("loopx.cli_commands.lark_inbox")
-    delayed_owner_imports = {
-        f"loopx.extensions.lark.{owner}"
-        for owner in lark_commands._LAZY_HOST_EXPORTS.values()
-    }
+    delayed_owner_imports = set(lark_commands._LAZY_HOST_EXPORTS.values())
     assert {
         "loopx.extensions.lark.event_collector",
         "loopx.extensions.lark.event_collector_runtime",

@@ -589,6 +589,12 @@ The same read-preview boundary now delays report generation/discovery and
 unselected Lark outbound, collector and turn-start sync imports. Report,
 renderer and Lark compatibility exports resolve to the original owner objects;
 selected consumption/provider paths retain their existing checks and effects.
+Constructing an inert Lark urgency projector no longer loads inbox routes or the
+extension runtime. A selected inbox still checks the original activation and
+permissions before loading its original route owner; absent activation refuses
+before route loading. Paired File/SQLite preview results are exactly equal and
+fixtures unchanged, but the cold/warm timing results remain mixed and the frozen
+whole-suite budget still fails. This slice does not qualify end-to-end speed.
 The next S2/S10 cost boundary is the pinned canonical-preview process and source
 loading, not a second planner or authoritative cache; sustained R2 qualification
 remains open until the original callers and frozen acceptance are demonstrated.
@@ -600,6 +606,10 @@ remains open until the original callers and frozen acceptance are demonstrated.
 同一只读预览边界也延后报告生成/扩展发现，以及未选中的 Lark 发送、采集器与
 Turn 启动同步依赖；报告、渲染器及 Lark 兼容导出仍指向原 owner 对象，实际选中
 的消费/提供方路径保留原检查和副作用。
+构建尚未选中的 Lark 紧急度投影器不再加载 inbox 路由或扩展运行时；实际选中时
+仍先执行原激活与权限检查，再加载原路由 owner，未激活则在路由加载前拒绝。
+File/SQLite 配对的完整预览结果相同、fixture 未变，但冷/热耗时仍有涨有跌，
+既定全套预算仍失败；这批改动不构成端到端提速验收。
 RPC/导入减少不等于冷/热延迟或全套预算达标。下一步测量固定源码的真实 Turn
 预览进程与加载成本，不能另建规划器或权威缓存；原调用方与既定验收未证明前，
 持续运行的 R2 验收仍开放。
