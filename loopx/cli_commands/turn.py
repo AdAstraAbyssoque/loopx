@@ -96,6 +96,12 @@ def handle_turn_command(
         strict_goal_admission = goal_admission if goal_admission.enabled else None
         if getattr(args, "codex_operation_tools", False) and args.host != "codex-cli":
             raise ValueError("--codex-operation-tools requires the codex-cli host")
+        if getattr(args, "codex_confirmed_operation_id", None) and not getattr(
+            args, "codex_operation_tools", False
+        ):
+            raise ValueError(
+                "confirmed operation continuation requires the owned operation transport"
+            )
         if (
             getattr(args, "codex_operation_source_route_json", None) is not None
             and not getattr(args, "codex_operation_tools", False)

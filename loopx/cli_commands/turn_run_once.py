@@ -771,6 +771,9 @@ def execute_turn_run_once(
                     return run_codex_operation_host(
                         request,
                         registry_path=registry_path,
+                        confirmed_operation_id=getattr(
+                            args, "codex_confirmed_operation_id", None
+                        ),
                         source_route=getattr(
                             args, "codex_operation_source_route_json", None
                         ),
