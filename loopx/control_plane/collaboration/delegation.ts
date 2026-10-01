@@ -7,6 +7,7 @@ import {canonicalAuthoritySha256} from "../coordination/authority_store_codec.ts
 import {acceptanceValidationEffects, type AcceptanceCompletionRequirements} from "../goals/acceptance_contract.ts";
 import {normalizeTodoCompletionValidationDeclaration} from "../todos/completion_validation_declaration.ts";
 import {readTurnSelectionRejection, turnSelectionRejectionState} from "../turn_driver/selection_rejection.ts";
+import { BARE_SHA256_PATTERN, ENVELOPED_SHA256_PATTERN } from "../content_digest.ts";
 
 function requireThat(ok: unknown, message: string): asserts ok {
   if (!ok) throw new EffectRuntimeRequestError(message);
@@ -99,7 +100,7 @@ export function delegationTurnPlanDecision(params: JsonObject): JsonObject {
   };
   const transaction = requireJsonObject(plan.transaction, "Turn plan transaction");
   requireThat(typeof transaction.turn_key === "string"
-    && /^sha256:[a-f0-9]{64}$/.test(transaction.turn_key), "Turn plan transaction requires a valid turn_key");
+    && ENVELOPED_SHA256_PATTERN.test(transaction.turn_key), "Turn plan transaction requires a valid turn_key");
   return {
     schema_version: "loopx_delegation_turn_plan_decision_v0",
     state: "planned",
@@ -268,6 +269,7 @@ export function delegationPreflight(params: JsonObject): JsonObject {
     promotion_from_surface_allowed: false,
     executor: {host: executor.executor, available: executor.available,
       reason: executor.unavailable_reason, profile: executor.execution_profile,
+      ...(executor.operation_transport ? {operation_transport: executor.operation_transport} : {}),
       ...delegationRuntimeFacts(executor)},
     effects,
     note: "Point-in-time preflight, not an execution permit or evidence of running work. "
@@ -286,7 +288,7 @@ export function delegationInventoryQuery(params: JsonObject): JsonObject {
   const cursor = params.cursor ?? null;
   requireThat(Number.isInteger(limit) && Number(limit) >= 1 && Number(limit) <= 50,
     "delegation inventory limit must be between 1 and 50");
-  requireThat(cursor === null || (typeof cursor === "string" && /^[a-f0-9]{64}$/.test(cursor)),
+  requireThat(cursor === null || (typeof cursor === "string" && BARE_SHA256_PATTERN.test(cursor)),
     "invalid delegation inventory cursor");
   return {limit, cursor};
 }
@@ -294,7 +296,7 @@ export function delegationInventoryQuery(params: JsonObject): JsonObject {
 /** The host supplies a fresh Delegations.read result, never a saved status. */
 export function delegationInventoryItem(params: JsonObject): JsonObject {
   const record = requireJsonObject(params.record, "delegation inventory record");
-  requireThat(typeof record.record_id === "string" && /^[a-f0-9]{64}$/.test(record.record_id),
+  requireThat(typeof record.record_id === "string" && BARE_SHA256_PATTERN.test(record.record_id),
     "invalid delegation record address");
   requireThat(record.operation_id === null || (typeof record.operation_id === "string"
     && /^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$/.test(record.operation_id)), "invalid delegation operation identity");
@@ -323,7 +325,7 @@ export function delegationInventoryItem(params: JsonObject): JsonObject {
     result.artifacts = observation.artifacts.map(value => {
       const artifact = requireJsonObject(value, "accepted artifact");
       requireThat(text(artifact.ref) && typeof artifact.sha256 === "string"
-        && /^[a-f0-9]{64}$/.test(artifact.sha256), "invalid accepted artifact reference");
+        && BARE_SHA256_PATTERN.test(artifact.sha256), "invalid accepted artifact reference");
       return {ref: artifact.ref, sha256: artifact.sha256};
     });
   }
@@ -337,7 +339,58 @@ export function transitionDelegationObservation(params: JsonObject): JsonObject 
   if (to === "accepted") requireThat(params.canonical_done === true
     && params.acceptance_ready === true && params.artifacts_current === true,
   "accepted return requires current canonical completion and artifacts");
+  if (to === "accepted" && from !== "accepted" && wakesItsConversation(params)) {
+    return {status: to, wake_intent: delegationWakeIntent(params)};
+  }
   return {status: to};
+}
+
+/** Whether an accepted result may produce a wake intent at all.
+ *
+ * Only an operation started from a conversation can be continued there. An
+ * ordinary CLI/MCP delegation has no conversation, so it keeps the transition it
+ * always had: no intent, no wake state, and no change to what a plain
+ * `wait`/`read` returns. Producing an intent and then refusing it in the pump
+ * would still widen a shared persistent projection for every caller who never
+ * enabled this capability.
+ */
+function wakesItsConversation(params: JsonObject): boolean {
+  if (params.requester == null) return false;
+  const requester = requireJsonObject(params.requester, "wake requester");
+  return requester.conversation != null;
+}
+
+/** The first transition to ``accepted`` is the one durable moment a requester
+ * can be continued without polling.  The intent names the requester, the
+ * conversation whose Turn started the operation (null when it was not started
+ * from one) and the exact accepted result; it grants no Turn and is not a
+ * second settlement.  The conversation is part of the intent identity, so the
+ * wake cannot be consumed by another conversation of the same requester. */
+function delegationWakeIntent(params: JsonObject): JsonObject {
+  const requester = requireJsonObject(params.requester, "wake requester");
+  requireThat([requester.goal_id, requester.agent_id, requester.operation_id, requester.request_id].every(text),
+    "wake intent requires the requester and result identity");
+  const goalRef = requester.goal_ref == null ? null : requireJsonObject(requester.goal_ref, "requester goal reference");
+  const origin = requester.conversation == null ? null
+    : requireJsonObject(requester.conversation, "requester conversation");
+  requireThat(origin === null || (text(origin.session_id) && text(origin.turn_id)),
+    "requester conversation requires its session and Turn");
+  const conversation = origin === null ? null : {session_id: origin.session_id, turn_id: origin.turn_id};
+  requireThat(Array.isArray(requester.artifacts) && requester.artifacts.length > 0, "wake intent requires accepted artifacts");
+  const digests = requester.artifacts.map(value => {
+    const artifact = requireJsonObject(value, "accepted artifact");
+    requireThat(text(artifact.ref) && typeof artifact.sha256 === "string"
+      && BARE_SHA256_PATTERN.test(artifact.sha256), "invalid accepted artifact reference");
+    return {ref: artifact.ref, sha256: artifact.sha256};
+  });
+  return {
+    schema_version: "loopx_delegation_wake_intent_v0",
+    intent_id: canonicalAuthoritySha256([requester.goal_id, requester.agent_id, requester.operation_id,
+      requester.request_id, digests, conversation]),
+    requester: {goal_id: requester.goal_id, agent_id: requester.agent_id, goal_ref: goalRef},
+    conversation,
+    operation_id: requester.operation_id, request_id: requester.request_id,
+  };
 }
 
 /** Repair only a false terminal observation after the exact Turn validated.

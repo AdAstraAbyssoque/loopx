@@ -219,6 +219,13 @@ onboarding time (including prerequisites/login) and the post-readiness interval;
 authentication or environment failures stay in the funnel. A small pilot is
 feedback, not statistical reliability or product-market fit.
 
+The [independent App first-use/repeat-use protocol](../../product/use-cases/steward/first-use-evaluation.md)
+prepares the five-slot freeze sheet, ordinary GQ01 handout, independent oracle
+and separate onboarding/result/attention/cost observations. It reuses existing
+optional first-run/usage-story intake and keeps failed or absent trials in the
+denominator. This is preparation only: execution waits for a qualified pinned
+package and consenting participants; no cohort result or recruitment is claimed.
+
 The critical path is usable evidence presentation → a reproducible real episode →
 packaged first-use repair → independent reproduction. As of 2026-09-21, #4762 and
 #4811 are merged; #4811 records native Codex MCP execution and a real-model
@@ -296,6 +303,7 @@ subsystem was not performed. Section 8 records the focused audit.
 
 | RFC | Stream | Current boundary | Next slice / acceptance |
 | --- | --- | --- | --- |
+| [Composable State Machines and Recovery Verification v0](composable-state-machines-recovery-verification-v0.md) | S2/S3/S10 | Design only; local conformance is reusable evidence | P1: one typed boundary, then ownership/writeback/settlement fault sequences and conditional progress; production entrypoint and real-backend evidence |
 | [Agent Loop Effect Interpreter](agent-loop-effect-interpreter-v0.md) | S2 | Accepted; core implemented, adoption continues | P0: reuse effect/recovery, cover R1 partial commits; retain domain-local replan ACK |
 | [TypeScript Control-Plane Migration Direction v0](typescript-control-plane-migration-v0.md) | S2 | Accepted; whole-transaction migration active | P0/P1: R1–R4 hot transactions first; T0–T4 caller/deletion/cost evidence; no full rewrite prerequisite |
 | [Semantic Vocabulary Convergence and Commit-Time Drift Checks (v0)](semantic-vocabulary-convergence-v0.md) | S2 | Accepted; registry/inventory/drift and subsequent typed slices exist | P1: converge by semantic role and active producer/consumer; no name-based enum merging; review schema changes separately |
@@ -315,11 +323,11 @@ subsystem was not performed. Section 8 records the focused audit.
 | [Provider-Neutral Post-Writeback Capability Hooks v0](provider-neutral-post-writeback-capability-hooks-v0.md) | S3/S8 | Accepted; first periodic-report vertical implemented | P1: R3 return/successors reuse durable intent; isolate hook failure, no primary-transaction coupling/direct effects |
 | [Agent IM, LoopX, And OpenViking Collaboration v0](agent-im-openviking-collaboration-v0.md) | S3/S6/S8 | Accepted; three-owner integration unqualified | P1/P2: separate IM delivery, LoopX work authority and OV context; reconnect/revoke/source-loss cases |
 | [External Evidence Research Capability v0](external-evidence-research-capability-v0.md) | S8/S11 | Accepted; typed Core plan/admission/retirement and CLI slice implemented | P1: qualify one host-method and one connector execution with the same provenance receipt; then add frontend/Lark projection companions |
-| [Automatic Execution Admission v0](automatic-execution-admission-v0.md) | S7/S2/S4 | Accepted; local candidate, host promotion pending | P0: App recommendation floor first; M2 atomic launch/hook qualification, M3 settings acceptance |
+| [Automatic Execution Admission v0](automatic-execution-admission-v0.md) | S7/S2/S4 | Accepted; typed local policy/admission and M3 settings candidate, host promotion pending | P0: App floor/schedule readback; M3 ordinary single-Save settings with optional notes, inheritance/conflict/readback acceptance; next-eligible/wait parity and M2 host/hook qualification remain separate |
 | [Per-Goal Usage, Token, and Cost Surfacing v0](goal-usage-token-cost-v0.md) | S7/S5 | Accepted; Codex aggregate/cost display slice exists | P0 observation→P1 provider coverage: unknown is not zero, deduplicate accounting, price source/freshness; usage grants no budget |
 | [Intelligent Review and Dynamic Presentation Surfaces v0](intelligent-review-presentation-surfaces-v0.md) | S5 | Accepted; action/attention verticals and local delivery-chain/acceptance review implemented | P1: cross-channel disclosure and governed amendment/settlement review; local visibility does not qualify G2 |
 | [Human Attention Wishlist v0](human-attention-wishlist-v0.md) | S5/S11 | Accepted; Held | P3: reopen only on repeated second real need; sidecar cannot alter gates/quota/scheduling |
-| [Human-confirmed domain operations (v0)](human-confirmed-domain-operations-v0.md) | S8/S9 | Accepted; proposal only | P2: simulated immutable confirmation→effect→reconciliation→return; finance provider separate, no broader coordination grant |
+| [Human-confirmed domain operations (v0)](human-confirmed-domain-operations-v0.md) | S8/S9 + R2/R3 | Accepted; canonical operation seam exists, managed native transport under owner review | Qualify source-context vs admitted-executor separation, exact human approval→one-shot consumption→domain evidence→original-route return; owned Turn/delegation need not await Desktop authentication. Live approval/effect/wakeup remain unqualified; finance provider stays separate |
 | [Provider-side authorization at effect acceptance (v0)](provider-effect-acceptance-v0.md) | S8/S9, supporting S2/S4 | Accepted design only; no runtime integration or qualified provider | M1: controlled provider and deterministic revoke/crash/replay conformance; strict production wiring remains gated by exact Goal lifetime, receipt retention and independent provider qualification |
 | [Research Exploration Control Plane v0](research-exploration-control-plane-v0.md) | S11/S3 | Accepted; partial M2 composition/successor | P1: independently verify observation/write-time gate/closure basis; defer inferred triggers and model selection |
 | [Hierarchical Agent Stride Control v0](hierarchical-agent-stride-control-v0.md) | S11/S7 | Accepted; M1 read-only observation | P2: matched shadow stride experiment with costs/events; no direct production cadence change |
@@ -618,6 +626,13 @@ Current status is design proposal; no G1 or default-screen promotion.
 - **Exit:** actual manager→worker and worker→worker callers; follow-up messages, lost source session, oversized answer, duplicate callback, successful send with lost ACK and transport restart. CLI, packaged frontend and Lark read back the same result with audience isolation. Ordinary already-authorized work gains no second confirmation.
 - **Migration/rollback:** characterize first, record old writer/reader mappings and deletion payoff; disabling new production must leave old requests drainable. Do not retain two writable lifecycles.
 
+The GQ08 App correction path now retains inline adjustments and ingress identity
+across view changes/reload through the same TS client cache as the composer.
+Restoration never dispatches work, and a terminal Turn cannot inherit a new
+Turn's target. Packaged recovery, blocked storage, coexisting drafts and real
+Chat ingress/store regression are bounded evidence; live recipient adoption,
+installed readback and Lark correction still belong to R3 qualification.
+
 R3 also qualifies the handoff RFC's hierarchical A6/A8/A13 extension: a managed
 worker requests, validates and integrates another peer's artifact before returning
 to the lead. Reuse the same request and work owners at each level. The ingress
@@ -637,12 +652,35 @@ callback; neither may appear as work completed or a second user-visible reply.
 This uses the R3 collaboration owner and current managed Turn wake instead of
 a separate steward scheduler.
 
+For App continuity in GQ07–GQ09, qualify chosen Manager/Goal view restoration
+through reload and browser Back/Forward using the existing typed route and
+draft owner. Keep source/Goal identity and prove navigation causes no work
+mutation or Turn replay. This bounded presentation qualification does not
+close R3's receiver-adoption, steering or original-route return acceptance.
+
 R3 entry qualification also covers ordinary human messages in an explicitly
 configured steward group without a mention. The shared TS admission rule owns
 trigger semantics; Lark supplies provider identity and the existing inbox owns
 deduplication and return. App settings select and read back the trigger per
 connection. External host-tool permission and sender-bound delegation remain
 separate gaps; receiving a request does not establish execution authority.
+
+Resolve source context before routing: a short reply retains the exact
+same-conversation parent, with missing and truncated material explicit. TS owns the bounded context projection;
+Lark transport and the private inbox preserve provider ancestry without granting
+instruction or operation authority. Real store/protocol fixtures cover ingress
+and replay; installed interpretation and original-route result remain R3 gates.
+
+Before choosing a recipient, the shared conversation must resolve the desired
+outcome against relevant current evidence. Already-satisfied requests return the
+verified result without a duplicate assignment or effect; unavailable or stale
+facts stay unknown. Explanation and judgment may be completed directly, and
+unfinished work reuses a qualified existing owner. GQ03/GQ07 qualify this across
+repository operations and completed reports, then qualify consecutive direct
+group requests, correction, adoption and original-route return separately. This
+is general semantic triage, not a new steward-specific classifier or scheduler.
+Typed admission owns provider-independent trigger reasons; the App renders those
+facts without treating a configuration change as retroactive execution.
 
 ### R4: Shared Goal Alignment and Evolution
 
@@ -753,7 +791,7 @@ independent admission without weakening task-level validation. See the
 [acceptance contract](../../reference/goal-acceptance-observations.md#owner-authorized-contract-v0).
 This narrows a local recovery gap, not the full R1/R2 coordination acceptance.
 
-**R1 transaction checkpoint.** Team-plan admission and whole-batch planning now live in `work_items/team_plan.ts`. Confirmation assigns all admitted lanes in one write with a durable operation receipt; identity is proposal + lane, never Todo text. File/SQLite authority uses the existing CAS and receipt owner; legacy Markdown writes the records and immutable receipt together under its existing fence and lock. Exact replay reads historical results even after a receiver changes, completes or deletes work. A precommit failure creates no lane prefix, and pending canonical display delivery requires recovery before Chat reports verified success. The card names partial assignments and gaps; quota/stop remain advisory and an explicit enforcement claim is rejected.
+**R1 transaction checkpoint.** Team-plan admission and whole-batch planning now live in `work_items/team_plan.ts`. Confirmation assigns all admitted lanes in one write with a durable operation receipt; identity is proposal + lane, never Todo text. File/SQLite authority uses the existing CAS and receipt owner; legacy Markdown writes the records and immutable receipt together under its existing fence and lock. Exact replay reads historical results even after a receiver changes, completes or deletes work. A precommit failure creates no lane prefix, and pending canonical display delivery requires recovery before Chat reports verified success. The card names partial assignments and gaps; quota/stop remain advisory and an explicit enforcement claim is rejected. Agent-originated settlement binds the same state basis at its journal's first write and re-reads it at settlement; a plan whose basis is missing or moved, or whose every lane is a gap, is a typed failed receipt that creates no Todo and replays unchanged.
 
 This closes the local assignment/retry portion of F4, not R1's collaboration acceptance. Registered receivers are assigned without being impersonated as authors; agent-originated settlement cannot assign another peer without owner confirmation. Assignment does not attest receiver adoption, a lease, execution, dependency consumption or independent acceptance. Do not add a second confirmation to ordinary already-authorized work. Gap resolution requires new explicit intent; replay must not silently extend the confirmed subset. The fingerprint binds current local state and canonical revision, not a full shared Goal-intent transaction. R2/R3/R4 still own executor qualification, receiver adoption/result return and shared intent/authorization; the cross-host Turn lease is not a plan barrier.
 

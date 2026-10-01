@@ -7,7 +7,6 @@ routing, receiver-authored replies, and publication receipts. No model polling.
 from __future__ import annotations
 
 import logging
-import re
 import threading
 from contextlib import ExitStack
 from datetime import datetime, timezone, timedelta
@@ -34,8 +33,8 @@ from ...control_plane.effect_runtime import EffectRuntimeRejected, effect_runtim
 
 from ...control_plane.collaboration.inbox import (
     _request_lock,
-    needs_conclusion as needs_conclusion,
 )
+from ...control_plane.content_digest import BARE_SHA256_PATTERN
 
 PHASES = ("decision", "conclusion")
 DELIVERY_STATUSES = {
@@ -265,9 +264,17 @@ def reply_status(root, row):
         path = _root(root) / "replies" / row["request_id"] / (phase + ".json")
         if not path.exists():
             continue
-        reply = _read(path)
         state_path = path.with_name(phase + ".delivery.json")
-        state = _read(state_path) if state_path.exists() else {}
+        try:
+            reply = _read(path)
+            state = _read(state_path) if state_path.exists() else {}
+        except (OSError, ValueError):
+            result.append({
+                "phase": phase, "status": "explicit_unverified",
+                "created_at": None, "delivered_at": None,
+                "error": "delivery_state_unreadable",
+            })
+            continue
         status = state.get("status", "queued")
         error = state.get("error")
         if status not in DELIVERY_STATUSES:
@@ -310,7 +317,7 @@ def project_chat_return_deliveries(root, session_id, messages):
             if route.get("session_id") != session_id:
                 continue
             request_id = str(route.get("request_id") or "")
-            if path.stem != request_id or not re.fullmatch(r"[a-f0-9]{64}", request_id):
+            if path.stem != request_id or not BARE_SHA256_PATTERN.fullmatch(request_id):
                 continue
             route_message_ids = {
                 "handoff." + _hash([request_id, phase]) for phase in PHASES
@@ -343,7 +350,7 @@ def project_chat_return_deliveries(root, session_id, messages):
     ]
 
 
-def project_chat_session_snapshot(root, store, session_id):
+def project_chat_session_snapshot(root, store, session_id, *, registry):
     """Project return delivery state into one existing Chat snapshot."""
 
     snapshot = store.session_snapshot(session_id)
@@ -351,20 +358,24 @@ def project_chat_session_snapshot(root, store, session_id):
         root, session_id, snapshot["messages"]
     )
     from .presentation import project_collaboration
-    snapshot["messages"] = project_collaboration(store, root, session_id, snapshot["messages"])
+    snapshot["messages"] = project_collaboration(store, root, session_id, snapshot["messages"], registry=registry)
     return snapshot
 
 
-def _initial_delivery_proved(row, route, turn):
-    receipt = (turn.get("response") or {}).get("context_handoff_receipt") or {}
-    return (
-        turn.get("status") == "completed"
-        and receipt.get("request_id") == row["request_id"]
-        and receipt.get("goal_id") == row["goal_id"]
-        and receipt.get("agent_id") == row["agent_id"]
-        and receipt.get("goal_ref") == row["goal_ref"]
-        and route.get("goal_ref") == row["goal_ref"]
-    )
+def _original_delivery_facts(row, route, turn, *, source_id):
+    # Adapt trusted store/authority facts only. The common typed owner decides
+    # whether a committed handoff survived a lost caller response.
+    identity = {key: row[key] for key in ("request_id", "goal_id", "agent_id", "source_id", "goal_ref") if key in row}
+    return {
+        "request": identity,
+        "route": route,
+        "authorized_source_id": source_id,
+        "turn": {
+            "client_turn_id": turn.get("client_turn_id"),
+            "status": turn.get("status"),
+            "context_handoff_receipt": (turn.get("response") or {}).get("context_handoff_receipt"),
+        },
+    }
 
 
 def _exact_return_scope(registry, reply):
@@ -416,13 +427,12 @@ def _exact_return_context(root, registry, store, path, state_path, now):
             or grant.get("source_id") != row["source_id"]
         ):
             raise ValueError("return_authorization_unavailable")
-        initial_delivery_proved = _initial_delivery_proved(row, route, turn)
         decide_collaboration_lifecycle(
             scope,
             operation="original_return_admit",
             record=row,
             route=route,
-            initial_delivery_proved=initial_delivery_proved,
+            initial_delivery=_original_delivery_facts(row, route, turn, source_id=grant.get("source_id")),
         )
         with _request_lock(
             root,
@@ -507,6 +517,7 @@ def _exact_return_context(root, registry, store, path, state_path, now):
             "state_path": state_path,
             "state": admitted,
             "token": token,
+            "source_id": grant["source_id"],
         }
 
 
@@ -537,9 +548,9 @@ def _write_exact_return_state(
             operation="original_return_settle",
             record=row,
             route=route,
-            initial_delivery_proved=(
-                isinstance(turn, dict)
-                and _initial_delivery_proved(row, route, turn)
+            initial_delivery=(
+                _original_delivery_facts(row, route, turn, source_id=context["source_id"])
+                if isinstance(turn, dict) else None
             ),
         )
         with _request_lock(
@@ -561,6 +572,10 @@ def _write_exact_return_state(
             else:
                 result.pop("admission", None)
             _write(context["state_path"], result)
+            if (result.get("status") == "delivered" and result.get("reply_verified") is True
+                    and current.get("status") != "delivered"):
+                from ...usage_ping import observe_verified_return
+                observe_verified_return()
 
 
 def _retry_state(state, now, *, error):
@@ -925,8 +940,11 @@ def drain(root, registry, store, external_sender, *, now=None, cancelled=lambda:
                     or grant.get("source_id") != row["source_id"]
                 ):
                     raise ReturnResolutionBlocked("return_authorization_unavailable", "return_authorization_unavailable")
-                if turn.get("status") != "completed":
-                    raise ReturnResolutionBlocked("initial_delivery_receipt_unavailable", "initial_receipt_not_completed")
+                with collaboration_goal_scope(registry, goal_id=row["goal_id"], agents=()) as scope:
+                    decide_collaboration_lifecycle(
+                        scope, operation="original_return_admit", record=row, route=route,
+                        initial_delivery=_original_delivery_facts(row, route, turn, source_id=grant.get("source_id")),
+                    )
                 if (
                     path.stem == "decision"
                     and (path.parent / "conclusion.json").exists()

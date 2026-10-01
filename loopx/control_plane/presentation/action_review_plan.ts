@@ -10,6 +10,8 @@ export type ActionReviewReason =
   | "incomplete_proposal" | "authority_gate" | "stale_proposal"
   | "apply_pending" | "readback_verified" | "readback_unverified"
   | "apply_failed" | "inactive_proposal"
+  | "operation_authorization_pending" | "operation_outcome_pending"
+  | "operation_confirmation_expired" | "operation_expiry_unknown"
   | "canonical_update_retry" | "canonical_update_projection_pending";
 
 export type OperationReviewContent = {
@@ -32,21 +34,30 @@ type OperationReviewFrameBase = {
 
 export type OperationReviewFrame = OperationReviewFrameBase & (
   | {
+      kind: "inactive";
+      attentionKind: "progress";
+      interactionMode: "inform";
+      reason: "operation_confirmation_expired" | "operation_expiry_unknown";
+    }
+  | {
       kind: "confirmation";
       attentionKind: "authority";
       interactionMode: "confirm_reject";
       decisions: readonly ["confirm", "reject"];
+      /** Canonical transport receipt, not proof of confirmation or execution. */
+      confirmationDeliveryVerified: boolean;
     }
   | {
       kind: "pending";
       attentionKind: "progress";
       interactionMode: "inform";
+      executionState?: "host_authentication_required" | "managed_turn_pending" | "managed_turn_started" | "consumed_outcome_pending";
     }
   | {
       kind: "result";
       attentionKind: "progress";
       interactionMode: "inform";
-      resultKind: "rejected" | "simulation_completed" | "completed";
+      resultKind: "rejected" | "cancelled" | "simulation_completed" | "completed" | "unknown" | "not_executed";
       resultDeliveryVerified: boolean;
       summary: string;
     }
@@ -275,10 +286,17 @@ function operationContent(parameters: JsonRecord): OperationReviewContent | null
     if (!label || !value) return null;
     fields.push({ label, value });
   }
+  const executor = objectValue(parameters.executor);
+  if (executor?.kind === "managed_turn") {
+    fields.push({label: "Executor / 执行者", value: `Managed Turn / 受管回合 · ${compactValue(executor.model, 80)}@${compactValue(executor.reasoning_effort, 20)}`});
+    fields.push({label: "Scope / 范围", value: `${compactValue(parameters.agent_id, 80)} · ${compactValue(executor.todo_id, 80)}`});
+    const source = objectValue(parameters.source_route);
+    if (source) fields.push({label: "Source context / 来源上下文", value: `${compactValue(source.host_surface, 60)} · ${compactValue(source.agent_id, 80)}`});
+  }
   return { title, subtitle, focus, fields, warning };
 }
 
-export function compileOperationReviewFrame(proposalValue: unknown): OperationReviewFrame | undefined {
+export function compileOperationReviewFrame(proposalValue: unknown, nowMs?: number): OperationReviewFrame | undefined {
   const proposal = objectValue(proposalValue);
   if (proposal?.action_kind !== "operation.execute") return undefined;
   const parameters = objectValue(proposal.normalized_parameters);
@@ -306,13 +324,33 @@ export function compileOperationReviewFrame(proposalValue: unknown): OperationRe
     expiresAt,
     content,
   };
+  // Cancellation is an administrative terminal state, not a domain execution
+  // outcome. Preserve the original envelope; never manufacture an execution
+  // receipt or offer the old confirmation again.
+  if (proposal.status === "cancelled") {
+    return {...base, kind: "result", attentionKind: "progress", interactionMode: "inform",
+      resultKind: "cancelled", resultDeliveryVerified: false, summary: ""};
+  }
   if (lifecycleState === "awaiting_confirmation") {
+    // An explicit read-time/fresh-delivery guard. Card reconstruction omits the
+    // clock so delayed callbacks still reach canonical confirmed_at
+    // validation. Never mutate the envelope or invent an outcome.
+    const expiryMs = /(?:Z|[+-]\d{2}:\d{2})$/i.test(expiresAt) ? Date.parse(expiresAt) : NaN;
+    if (nowMs !== undefined && (!Number.isFinite(expiryMs) || !Number.isFinite(nowMs) || nowMs > expiryMs)) {
+      return {...base, kind: "inactive", attentionKind: "progress", interactionMode: "inform",
+        reason: Number.isFinite(expiryMs) && Number.isFinite(nowMs)
+          ? "operation_confirmation_expired" : "operation_expiry_unknown"};
+    }
+    const delivery = objectValue(operation.delivery);
     return {
       ...base,
       kind: "confirmation",
       attentionKind: "authority",
       interactionMode: "confirm_reject",
       decisions: ["confirm", "reject"],
+      confirmationDeliveryVerified: delivery?.provider === "lark"
+        && ["message_id", "chat_id", "app_id", "binding_digest", "card_digest", "delivered_at"]
+          .every(key => textValue(delivery[key]) !== null),
     };
   }
   if (lifecycleState === "claimed") {
@@ -321,9 +359,16 @@ export function compileOperationReviewFrame(proposalValue: unknown): OperationRe
       kind: "pending",
       attentionKind: "progress",
       interactionMode: "inform",
+      ...(["agent_session", "managed_turn"].includes(String(objectValue(parameters.executor)?.kind))
+        ? {executionState: objectValue(operation.agent_handoff) ? "consumed_outcome_pending" as const
+          : objectValue(parameters.executor)?.kind === "managed_turn"
+          ? objectValue(operation.host_start)?.schema_version === "loopx_operation_host_start_v0"
+            ? "managed_turn_started" as const : "managed_turn_pending" as const
+          : "host_authentication_required" as const}
+        : {}),
     };
   }
-  const outcome = objectValue(operation.outcome);
+  const outcome = objectValue(operation.reconciliation) ?? objectValue(operation.outcome);
   if (!outcome) return undefined;
   const rejected = outcome.outcome === "rejected_by_operator";
   const simulated = outcome.simulation === true || base.simulated;
@@ -332,8 +377,11 @@ export function compileOperationReviewFrame(proposalValue: unknown): OperationRe
     kind: "result",
     attentionKind: "progress",
     interactionMode: "inform",
-    resultKind: rejected ? "rejected" : simulated ? "simulation_completed" : "completed",
-    resultDeliveryVerified: objectValue(operation.result_delivery) !== null,
+    resultKind: outcome.outcome === "submission_unknown" ? "unknown" : outcome.outcome === "not_executed" ? "not_executed"
+      : rejected ? "rejected" : simulated ? "simulation_completed" : "completed",
+    resultDeliveryVerified: objectValue(operation.result_delivery) !== null
+      && (!["agent_session", "managed_turn"].includes(String(objectValue(parameters.executor)?.kind))
+        || objectValue(operation.result_delivery)?.outcome_stage === (operation.reconciliation ? "reconciled" : "initial")),
     summary: textValue(outcome.summary) ?? "",
   };
 }
@@ -342,7 +390,7 @@ export function compileOperationReviewFrame(proposalValue: unknown): OperationRe
  * Compile provider-neutral presentation semantics from a typed action proposal.
  * This reducer owns no action authority and performs no external effects.
  */
-export function compileActionReviewPlan(proposalValue: unknown): ActionReviewPlan {
+export function compileActionReviewPlan(proposalValue: unknown, nowMs?: number): ActionReviewPlan {
   const proposal = objectValue(proposalValue) ?? {};
   const identity: ActionReviewIdentity = {
     schemaVersion: "action_review_plan_v0",
@@ -351,7 +399,7 @@ export function compileActionReviewPlan(proposalValue: unknown): ActionReviewPla
       ? proposal.expected_state_fingerprint
       : "",
   };
-  const operationFrame = compileOperationReviewFrame(proposal);
+  const operationFrame = compileOperationReviewFrame(proposal, nowMs);
   const reviewCardFrame = compileReviewCardFrame(proposal);
   const finish = (state: ActionReviewState): ActionReviewPlan => ({
     ...identity,
@@ -364,14 +412,18 @@ export function compileActionReviewPlan(proposalValue: unknown): ActionReviewPla
     reason: ActionReviewReason,
   ): ActionReviewPlan => finish({ interaction, reason, canApply: false });
   const lifecycle = proposal.action_kind === "goal.lifecycle";
+  if (operationFrame?.kind === "inactive") return held("inactive", operationFrame.reason);
   // Lifecycle uses conservative fact precedence. Generic deferred proposals may
   // retain a historical gate; their existing status-based retry path is preserved.
   if ((lifecycle && proposal.gate != null) || proposal.status === "gated") return held("gated", "authority_gate");
   if ((lifecycle && proposal.stale != null) || proposal.status === "stale") return held("refresh", "stale_proposal");
   if (proposal.status === "applied") {
+    if (operationFrame?.kind === "result" && operationFrame.resultKind === "unknown") {
+      return held("repair", "readback_unverified");
+    }
     const receipt = objectValue(proposal.receipt);
     return receipt?.projection_verified === true
-      && (proposal.action_kind !== "operation.execute" || objectValue(objectValue(proposal.operation)?.result_delivery) !== null)
+      && (proposal.action_kind !== "operation.execute" || (operationFrame?.kind === "result" && operationFrame.resultDeliveryVerified))
       ? held("completed", "readback_verified")
       : held("repair", "readback_unverified");
   }
@@ -391,7 +443,13 @@ export function compileActionReviewPlan(proposalValue: unknown): ActionReviewPla
       reason: failure?.error_code === "canonical_update_projection_pending"
         ? "canonical_update_projection_pending" : "canonical_update_retry"}), retryOriginal: true};
   }
-  if (proposal.status === "applying") return held("pending", "apply_pending");
+  if (proposal.status === "applying") {
+    if (operationFrame?.kind === "pending" && operationFrame.executionState) {
+      return held("pending", operationFrame.executionState === "consumed_outcome_pending"
+        ? "operation_outcome_pending" : "operation_authorization_pending");
+    }
+    return held("pending", "apply_pending");
+  }
   if (proposal.status === "failed" || proposal.error != null) return held("repair", "apply_failed");
   if (proposal.status !== "preview_ready" && proposal.status !== "deferred") return held("inactive", "inactive_proposal");
   const reviewed = (reason: ActionReviewReason, canApply = true): ActionReviewPlan =>

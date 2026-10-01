@@ -408,7 +408,7 @@ def test_known_provider_locator_is_verified_after_restart_without_resend(flow):
 
 
 def test_chat_snapshot_keeps_current_session_delivery_after_unrelated_route_limit(flow):
-    root, _, store, _ = flow
+    root, registry, store, _ = flow
     session = store.create_session(
         goal_id="loopx-manager",
         agent_id="codex",
@@ -465,7 +465,7 @@ def test_chat_snapshot_keeps_current_session_delivery_after_unrelated_route_limi
             {"request_id": request_id, "session_id": f"unrelated-{index}"},
         )
 
-    snapshot = project_chat_session_snapshot(root, store, session["session_id"])
+    snapshot = project_chat_session_snapshot(root, store, session["session_id"], registry=registry)
     returned = {
         row["message_id"]: row["return_delivery"]["status"]
         for row in snapshot["messages"]
@@ -736,7 +736,7 @@ def test_unclassified_verification_failure_recovers_without_resending(flow, mess
     assert transport.verify_calls == 2
     assert transport.send_calls == 1
     assert reply_status(root, receipt)[0]["status"] == "delivered"
-    snapshot = project_chat_session_snapshot(root, ChatSessionStore(root), session["session_id"])
+    snapshot = project_chat_session_snapshot(root, ChatSessionStore(root), session["session_id"], registry=registry)
     replies = [m for m in snapshot["messages"] if m.get("origin") == "manager_followup"]
     assert len(replies) == 1
     assert replies[0]["return_delivery"]["status"] == "delivered"
@@ -760,7 +760,9 @@ def test_public_delivery_projection_normalizes_unknown_private_state(flow):
     assert "private" not in str(state)
 
 
-def test_background_service_delivers_without_another_agent_or_query(flow):
+def test_background_service_delivers_without_another_agent_or_query(flow, monkeypatch):
+    observations = []
+    monkeypatch.setattr('loopx.usage_ping.observe_verified_return', lambda: observations.append('verified'))
     root, registry, store, create = flow
     _, _, receipt = create(True)
     rid = receipt["request_id"]
@@ -791,6 +793,8 @@ def test_background_service_delivers_without_another_agent_or_query(flow):
     assert state["status"] == "delivered"
     assert state["provider_receipt"] == "sha256:provider-proof"
     assert not service.thread.is_alive()
+    drain(root, registry, store, transport)
+    assert observations == []  # Legacy delivery is outside the exact-source telemetry contract.
 
 
 @pytest.mark.parametrize("project", [False, True], ids=["steward", "project"])
@@ -900,7 +904,7 @@ def test_reply_delivery_does_not_replace_receiver_disposition(flow, project, dec
     acknowledge(root, "research", "worker", rid, decision, reason)
     report(root, "research", "worker", rid, "conclusion", "The assessment is available.")
     drain(root, registry, store, lambda *_: pytest.fail("private return sent externally"))
-    snapshot = project_chat_session_snapshot(root, ChatSessionStore(root), session["session_id"])
+    snapshot = project_chat_session_snapshot(root, ChatSessionStore(root), session["session_id"], registry=registry)
     collaboration = next(row["collaboration"] for row in snapshot["messages"] if row.get("collaboration"))
     assert collaboration["decision"] == decision
     assert collaboration["goal_id"] == "research"
@@ -924,7 +928,7 @@ def test_external_reply_never_exposes_private_receiver_reason(flow):
         sent.append(payload)
         return {"ok": True, "reply_verified": True, "verification_performed": True}
     drain(root, registry, store, sender)
-    snapshot = project_chat_session_snapshot(root, store, session["session_id"])
+    snapshot = project_chat_session_snapshot(root, store, session["session_id"], registry=registry)
     assert "Private receiver rationale" not in json.dumps(snapshot)
     assert len(sent) == 1
     assert sent[0].startswith("协作回复 · worker")

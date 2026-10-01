@@ -49,6 +49,29 @@ public CLI/import or serialized contracts. Retain public behavior tests; remove
 only characterization scaffolding whose retired implementation has no consumer.
 Deletion is code retirement, not deletion of users' state, receipts or backups.
 
+### Merged T4 slice: unused Python lease/handoff facades
+
+The caller audit at `e240730ec` led to #5395, merged at `8474c8d86`.
+The following unused internal crossings are retired. Native decision and
+transaction owners remain; this is independent of D2 qualification and
+default-entry adoption.
+
+| Removed boundary | Last caller / replacement | Compatibility and validation |
+| --- | --- | --- |
+| `authority_core.py` acquire/renew/transfer/release, owner-eligibility and handoff-transition command facades | Only the old core tests; real lease and handoff adapters already use whole native transactions | No persisted command format or public CLI schema changes. Retain independent native generation, replay, conflict, cleanup and quiescence tests; exercise real File/SQLite entrypoints. |
+| `task_lease.acquire.decide`, `task_lease.lifecycle.decide`, `coordination.handoff_mode.plan` RPC registrations | Only those retired facades / handler tests; native transactions call the same typed rules directly | Obsolete private RPCs now reject unsupported methods. Keep `task_lease.owner_eligibility` and write-scope overlap: actual Python callers remain. |
+| Lease-only `local_snapshot.py` normalization and error projection | No remaining caller; native executors own lease facts and errors | Keep `todo_snapshot_from_mapping`, used by live Todo mutation authorization. No store, receipt, backup or migration reader is removed. |
+
+`authority_core.py` is still a live Todo bridge. `LeaseAction` and
+`LeaseModeGateCommand` also remain because the semantic-vocabulary registry
+explicitly retains that input contract until its M4 review. This slice does not
+lower semantic coverage floors to discard a declared compatibility obligation.
+Old facade-only tests retired with their implementation; public/native behavior
+tests remain. Reverting this slice restores the internal crossing without a data
+conversion. Local CLI adoption at `db3672f3c` verifies a clean source manifest,
+qualified SQLite runtime, current known authority formats and healthy canonical
+contract readback. This does not certify every installed Host or D2.
+
 ## Next delivery order
 
 | Order | Complete outcome / owner | Concrete exit and deletion opportunity |
@@ -237,9 +260,25 @@ Scale characterization with 4,101 synthetic Agent Todos still hits the existing
 repair for File/SQLite. The repaired contract API can read that collection;
 this does not qualify the remaining whole-command payload boundary.
 
-The next B work remains history artifact lookup and remaining public payload/
-cold-path costs, preserving file-change freshness, full decision inputs and
-corruption rejection. Contract checks and attention now share one request-local, validated canonical
+The next B work is SQLite admission on a frozen source/runtime profile: rerun
+the existing reference capacity axes, reconcile concurrency/recovery/consumer-lag
+evidence, and verify the applicability of retained natural-time soak results.
+The comparison runner's former conflict expectation contradicted merged #5169:
+an identical historical intent must return its original applied revision/cursor.
+The runner now checks that result, independently rejects projection/event/receipt
+drift, and walks the complete history before and after retries without retaining
+all expected snapshots. A failing invariant prevents report publication; checks
+stay outside the unchanged timing windows. This repairs the qualification tool,
+not a provider defect or a D2/default pass. #4224 already reports a soak started
+on September 14 at `e98191faa`; its final result and applicability to the current
+candidate still need evidence. Do not call it unstarted or restart its clock
+solely because an unrelated source revision changed.
+
+Last-caller Python decision retirement can proceed independently where the TS
+replacement and affected real callers are proven. Whole Markdown writer removal
+still requires C's new-Goal/upgrade/recovery exits. Complete consumer metadata,
+freshness and decision inputs remain acceptance requirements. Contract checks
+and attention now share one request-local, validated canonical
 Todo snapshot per runtime/Goal. Standalone checks and subsequent requests read
 afresh; lease and projection-writeback reads do not participate. Consumer edits
 cannot mutate retained input, and a failed first read cannot recover midway
@@ -260,7 +299,101 @@ retained allocations after return remain about 2.1 MB. This is current-state
 read-cost evidence, not historical replay, CLI cold-start, D2 qualification or
 a provider-default comparison. Python owns the request's transport-input
 lifetime; TS still owns validation, resume, succession, acceptance and selection.
-Next reduce repeated preparation at the existing typed projection owner, then
-coordinate full-Goal frontend summary/list/detail consumers. Agent status
-already has bounded display; final JSON compaction alone does not remove
+Resume input preparation now runs only for groups that contain a wait condition;
+succession still receives complete lineage, and waits still see archived and
+cross-role dependencies. On the same 1,117-Todo isolated current projection,
+against the baseline that already shares snapshots, structured-item calls fall
+from 2,687 to 1,570; native reads remain one and TS effect calls remain 16.
+Three warm samples give File medians of 430→425 ms and SQLite 493→481 ms.
+The small latency difference is not cold-start or provider-default evidence.
+Actual agent and full-Goal CLI responses retain their size and semantics apart
+from observation time/age fields. The full-Goal response remains about 2 MB.
+A follow-up on `b9a34c3e7` isolates the shared read-model validator: it
+serialized the full Todo array twice solely to check record order, despite an
+already validated unique-id index. Compare that index's insertion order with
+its existing Unicode-sorted ids instead; retain the full content digest,
+record validation and provider reads. On a detached 1,117-Todo/36-lease current
+projection, ten warm Node samples per provider reduced validator medians from
+42–43 ms to 27 ms. This is a common TS cost, not evidence to rank providers or
+change the default. No cached authority, lease omission, response cap or
+frontend contract change is introduced. Unicode order, duplicates, malformed
+JSON, archived-record tampering and both record formats remain rejection tests.
+The next bounded step, based on `c57454e40`, reuses one validated Todo identity
+index within each synchronous collection or ownership consumer. It removes
+repeated record copies while preserving each consumer's validation order and
+Todo-only independence from lease integrity. It does not share a provider load
+between RPCs. On the same detached projection, ten alternating warm samples per
+arm give full Todo/lease collection medians of 32.4→27.5 ms (File-loaded input)
+and 32.9→28.0 ms (SQLite-loaded input). Ownership, including its provider load,
+changes 43.2→39.8 ms and 62.9→61.4 ms respectively; the latter has an outlier.
+Full CLI status retains all records and metadata, differing only in observation
+timestamps and read ages. Real File, SQLite and PostgreSQL suites pass. These
+component results do not establish a cold-start gain, sustained-operation
+acceptance or a provider-default decision. Cross-RPC ownership/status reads and
+full-Goal frontend summary/list/detail remain separate unfinished work. Agent
+status already has bounded display; final JSON compaction alone does not remove
 full-source computation.
+
+### Succession transport capacity
+
+A current 5,000-row summary reproduces a separate B boundary: the initial
+whole-graph succession evaluation fits, but resending its facts and evaluations
+for display verification exceeds the existing 2 MiB request limit. The
+co-deployed internal succession RPC now uses declared, strictly checked columns
+for both facts and evaluations, following the summary adapter's existing pattern.
+No rows, lineage edges, hashes or metadata are dropped; the TS graph and reuse
+validators are unchanged. The old internal wire shape is replaced, not retained
+as a second parser; persisted Todo formats and public responses do not change.
+The representative request falls from over 2 MiB to about 0.96 MB without raising
+budgets. Real File/SQLite CLI tests cover exact counts, distant inferred edges,
+metadata preservation and unchanged provider state. This is a bounded capacity
+repair, not unlimited graph capacity, stable latency evidence, D2 qualification
+or permission to change the default provider. Full-Goal summary/list/detail
+adoption and sustained observation remain separate work.
+
+### Packaged-source fingerprint cost
+
+The B-lane increment overlaps source-byte reads through the existing bounded,
+ordered file reader. It preserves relative names, raw bytes, metadata
+invalidation, request-scoped memoization and failure/retry behavior. The Python
+filesystem adapter gains no state-policy owner or persistent cache.
+
+Current validation compared baseline `0538bf1631a7` with this implementation on
+macOS arm64, Python 3.13.13 and Node 24.21.0. Each arm ran nine alternating fresh
+CLI processes after one startup warm-up, against the same disposable synthetic
+File/SQLite fixtures. Effect processes were isolated; OS caches were not flushed.
+The source snapshot contained 249 TS/JSON files (3,065,799 bytes). Fingerprint
+stage medians were 123.5→53.8 ms for File and 111.3→48.0 ms for SQLite.
+Whole `status` medians were 1.032→1.054 s and 1.019→1.010 s; sampled p95 values
+were 1.745→1.104 s and 1.114→1.086 s (with nine samples, p95 is the maximum).
+Twenty full-response pairs differed only at explicitly enumerated observation
+timestamps; malformed-registry rejection was unchanged.
+
+This supports a bounded cold-caller cost improvement, not a general status
+speedup, provider throughput or D2/default qualification. A warm same-process
+microbenchmark with fingerprint memoization explicitly cleared regressed from
+6.7 to 12.8 ms; normal unchanged requests retain memoization. Thread scheduling
+costs more when all bytes are already hot. Neither workload establishes a fleet
+latency guarantee. Whole-Goal payload/consumer work and sustained operation
+remain open; this increment authorizes no legacy-writer deletion or UI truncation.
+
+### File recovery receipt batches
+
+Archive restore and audit already use the provider-neutral 1–64 operation
+receipt batch contract. File now implements that contract with one exact-byte
+and store-identity proof per batch instead of rereading its envelope for each
+receipt. Caller order, duplicates, missing results and original receipt bodies
+remain intact; each returned body is detached. Invalid input or corrupt retained
+history rejects the batch. Array holes are rejected before storage access,
+including through the shared helper. Single-receipt error projection stays unchanged.
+
+On the same detached, restored 1,287-commit history, nine warm samples per arm
+on macOS arm64 / Node 24.21.0 reduce a 16-receipt File batch median from
+346.2 to 21.3 ms; the unchanged SQLite control measures 111.3 and 111.1 ms.
+Receipt results and authority heads match within each provider. These are warm
+component timings, not equivalent provider-integrity work, whole-restore latency,
+cold-read or D2/default qualification. File still rewrites the retained envelope
+on each restored commit; a prior full-history restore exceeded its caller's
+300-second timeout and later published an exact matching acknowledgement.
+That remaining recovery cost is not closed by this receipt-read optimization.
+The #4224 soak was started; its final evidence and applicability remain pending.

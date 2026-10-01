@@ -5,8 +5,6 @@ Receipts describe transport/consumption, never a second mutable work status.
 
 from __future__ import annotations
 
-import re
-
 from . import _read, _root, _write
 from ...control_plane.collaboration.inbox import (
     _entry as _entry,
@@ -20,7 +18,12 @@ from ...control_plane.collaboration.goal_instance_scope import (
     decide_collaboration_lifecycle,
 )
 from ...todos import list_goal_todos
+from ...control_plane.todos.contract import TODO_ID_PATTERN
 from ...chat_manager_details import _text
+from ...control_plane.content_digest import (
+    BARE_SHA256_PATTERN,
+    ENVELOPED_SHA256_PATTERN,
+)
 
 
 def _core_todos(registry_path, root, goal_id):
@@ -48,9 +51,9 @@ def link(
         raise ValueError("at least one Core Todo or evidence reference required")
     if len(todo_ids) > 16 or len(evidence_ids) > 16:
         raise ValueError("too many context links")
-    if any(not re.fullmatch(r"todo_[a-f0-9]{12}", x) for x in todo_ids):
+    if any(not TODO_ID_PATTERN.fullmatch(x) for x in todo_ids):
         raise ValueError("invalid Core Todo id")
-    if any(not re.fullmatch(r"sha256:[a-f0-9]{64}", x) for x in evidence_ids):
+    if any(not ENVELOPED_SHA256_PATTERN.fullmatch(x) for x in evidence_ids):
         raise ValueError("evidence references must be opaque SHA256 identifiers")
     if todo_ids:
         rows = _core_todos(registry_path, root, goal_id)
@@ -118,7 +121,7 @@ def query(
     limit=8,
 ):
     """External callers see only requests from their exact audience, never raw text."""
-    if request_id is not None and not re.fullmatch(r"[a-f0-9]{64}", request_id):
+    if request_id is not None and not BARE_SHA256_PATTERN.fullmatch(request_id):
         raise ValueError("invalid context request id")
     if not owner_scope and not channel_id:
         raise ValueError("handoff audience required")

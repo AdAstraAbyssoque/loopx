@@ -71,7 +71,52 @@ refreshed golden.
 行为，不授予其正确性；发现矛盾时应修复规则并增加反例或 mutation 覆盖，不得刷新
 golden 来让测试通过。
 
+### State Composition Qualification / 状态组合验证
+
+For a change spanning domain machines, select a bounded journey under the
+[composition verification RFC](../architecture/rfcs/composable-state-machines-recovery-verification-v0.md).
+Reuse the quality catalog and existing validation matrix. Record independent
+invariants, explored actor/resource counts and trace bounds, fault orderings,
+real-entrypoint/readback evidence and conditional progress assumptions. A
+bounded sequence check is not an unbounded liveness proof. Existing deterministic
+checks, real-backend gates and required validation remain in force.
+
+跨领域状态机变更沿[组合验证 RFC](../architecture/rfcs/composable-state-machines-recovery-verification-v0.zh-CN.md)
+选择有界旅程，复用 quality catalog 与已有验证矩阵。记录独立不变量、探索的 actor／
+resource 数与轨迹上限、故障顺序、真实入口／回读证据及有条件推进前提。有界序列
+检查不等于无界活性证明；既有确定性检查、真实后端门禁与必需验证继续适用。
+
+For a selected typed-core replacement, check illegal combinations at compile
+time and malformed/historical input at runtime. Compare pinned base/head through
+the same public path. Prove sensitivity with a historical failure or deliberate
+semantic mutation; a golden generated from the candidate is not an oracle.
+Retain only durable counterexamples, and do not build a general harness when an
+existing conformance family can express the causal sequence.
+
+选中的 typed core 替换同时验证编译期非法组合与运行时损坏／历史输入。相同公开
+路径比较 pinned base/head，用历史失败或语义 mutation 证明敏感性；候选实现生成
+的 golden 不是 oracle。只保留持久反例；已有 conformance 测试族能表达因果序列时，
+不另建通用 harness。
+
 ## Pull-Request Baseline / PR 基线
+
+### Synthetic Runs Must Not Report Adoption / 合成运行不计入使用遥测
+
+CI, pytest and canary smoke subprocesses disable usage collection with
+`LOOPX_USAGE_PING=0`. A synthetic installer, benchmark profile or release
+qualification that reconstructs its environment must set that opt-out itself,
+including in Agent tool shells; filtering out `CI` must never restore collection.
+Do not infer test provenance from OS, install channel or random installation IDs.
+Telemetry transport tests may explicitly opt in only with isolated state and a
+disposable local collector. Validate the actual child CLI and typed sender, and
+assert zero HTTP requests for disabled profiles rather than only inspecting a
+parent environment dictionary.
+
+CI、pytest 和 canary smoke 子进程通过 `LOOPX_USAGE_PING=0` 关闭遥测。合成安装、
+评测 profile 或发布资格验证重建环境时，必须自行设置关闭开关，并覆盖 Agent 工具
+shell；不能因为过滤了 `CI` 就恢复采集。不能按系统、安装渠道或随机 ID 推断测试
+来源。遥测传输专项测试只允许使用隔离状态和可丢弃的本地收集器显式开启。验证实际
+子进程 CLI 和类型化发送端，并断言关闭状态下 HTTP 请求为零，而非只检查父环境。
 
 ### Required Merge Check / 必需合并检查
 
@@ -95,11 +140,24 @@ is authoritative for activation. The lead maintainer alone retains the
 existing bypass exception; record the exact head, reason, validation and known
 failures whenever using it. A bypass does not turn failed tests into a pass.
 
+Both required workflows also run on `merge_group`, so a GitHub merge queue can
+qualify the exact candidate that would land on `main`. Queue candidates never
+receive a job exemption: the classifier plans them as full, exactly like
+`main`. `Sign-off` checks the same contribution range and exempts only
+verified GitHub-generated two-parent merges, so configure the queue with the
+merge method `merge`. The trigger is inert until the live ruleset enables a
+merge queue. Enabling the queue, and then relaxing the up-to-date-branch
+requirement, is a ruleset decision for the lead maintainer.
+
 每个 PR 都会收到 `merge-gate` 结果。代码、工作流、治理规则和未知路径必须通过
 原有核心测试；失败、取消、缺失或意外跳过均不能通过。仅白名单根目录 Markdown
 或 `docs/**/*.md` 的修改可显式跳过昂贵测试；运行时 prompt、可执行文档、代码删除
 及代码移入文档均不享受豁免。实际启用状态以在线规则为准，使用 owner bypass
 必须留下版本、原因、验证和已知失败的记录。
+两个必需工作流同样响应 `merge_group`，合并队列可在合入 `main` 前验证确切候选；
+队列候选一律全量验证、不享受豁免。队列合并方式应设为 `merge`，因为 `Sign-off`
+只豁免已验证的 GitHub 双父合并提交。在线规则启用合并队列前该触发不生效；启用
+队列并放宽“分支必须最新”要求由首席维护者决定。
 
 To validate or change the classifier locally:
 
@@ -402,6 +460,18 @@ Use `--output .local/semantic-inventory.json` only when an exported report is us
 `--output <path> --check` checks that explicit report without repairing it.
 词表、owner 与预算继续入库并受检查；结构清单按需计算，无须为普通 PR 补生成文件。
 
+The same premerge semantic smoke validates the tracked project-registry I/O
+census, including call-site coordinates and direct-I/O classifications, using
+its existing tracked-product source policy. After moving a registered call, run
+`uv run python scripts/generate_project_registry_io_manifest.py` and review the
+diff; new direct I/O still requires classification. This is a source-checkout
+check requiring Git and Node development dependencies, not an installed-App
+health check. No model calls are involved.
+
+同一 premerge 语义检查也会校验项目注册表 I/O 清单，复用已有产品源码扫描规则，检查调用
+位置与直接 I/O 分类。移动调用后重新生成并审阅清单；新增直接 I/O 仍需分类。
+这属于需要 Git 和 Node 开发依赖的源码检查，不是安装版 App 健康检查，也不调用模型。
+
 Confirm the interpreter and imported checkout when diagnosing a mismatch:
 
 ```bash
@@ -424,6 +494,21 @@ override when a separate compatible environment is intentional.
 `scripts/test-python.mjs`：显式覆盖优先，否则优先当前 worktree 环境，校验
 Python `>=3.11`；不会静默退回不兼容的系统 `python3`。回归测试会拦截测试入口
 重新引入裸 `python3` 子进程或默认值。
+
+The control-plane test and coverage commands run at most four test files at a
+time. Many files start additional Node/Python processes or exercise real SQLite;
+CPU-count-based fan-out can starve those children and turn resource contention
+into apparent transport failures. The SQLite capacity rehearsal remains in the
+full suite with its existing workload and deadlines; this concurrency bound
+does not relax capacity admission criteria. Test transport timeouts with
+controlled clocks or observable request cancellation, separately from loaded
+whole-suite throughput measurements.
+Healthy external-worker fixtures use the production quota timeout; only timeout
+cases inject a short deadline. Detached telemetry integration waits for a local
+start/end record with a bounded watchdog. That observation includes process
+startup and is separate from the HTTP cancellation contract. Rebuild Chat after
+changing shared TS inputs before running packaged-dashboard tests; a stale
+source witness must still reject the bundle.
 
 Canary executes Python checks with the interpreter that launched LoopX
 (`sys.executable`). Its displayed `python3` command is not a second interpreter

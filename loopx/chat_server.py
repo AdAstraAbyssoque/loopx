@@ -422,6 +422,8 @@ class ChatHTTPServer(ThreadingHTTPServer):
             self.lark_app_setup_manager.close()
         if hasattr(self, "manager_return_service"):
             self.manager_return_service.close()
+        if hasattr(self, "delegation_wake_service"):
+            self.delegation_wake_service.close()
         if hasattr(self, "lark_goal_topic_runtime"):
             self.lark_goal_topic_runtime.close()
         if hasattr(self, "runtime_controller"):
@@ -646,8 +648,8 @@ class ChatRequestHandler(
                     channel_id=channel_id,
                 )
             session_id = str(session["session_id"])
-            self.server.chat_store.append_message(session_id, role="user", text=question)
-            self.server.chat_store.append_message(session_id, role="agent", text=answer)
+            user_message = self.server.chat_store.append_message(session_id, role="user", text=question)
+            answer_message = self.server.chat_store.append_message(session_id, role="agent", text=answer)
             self.server.chat_store.update_session(session_id, last_activity_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
         except Exception as exc:  # noqa: BLE001 - local validation response.
             self._send_error(str(exc))
@@ -657,6 +659,8 @@ class ChatRequestHandler(
                 "ok": True,
                 "schema_version": "loopx_chat_projection_exchange_v1",
                 "session_id": session_id,
+                "user_message_id": user_message["message_id"],
+                "answer_message_id": answer_message["message_id"],
             },
             status=201,
         )
@@ -766,7 +770,8 @@ class ChatRequestHandler(
     def _session_snapshot(self, session_id: str) -> None:
         try:
             self._send_json(project_chat_session_snapshot(
-                self.server.runtime_root, self.server.chat_store, session_id))
+                self.server.runtime_root, self.server.chat_store, session_id,
+                registry=self.server.registry_path))
         except KeyError:
             self._send_error("chat session was not found", status=404)
 
@@ -1567,6 +1572,21 @@ def serve_chat(
     server.lark_goal_topic_runtime.start()
     from .extensions.lark.manager_returns import start_return_service
     server.manager_return_service = start_return_service(server, runtime_root)
+    from .chat_loopx_mode import DelegationWakeService
+
+    def _wake_goal_context(session):
+        registry = load_registry(server.registry_path)
+        goal = next(
+            (item for item in registry_goals(registry) if str(item.get("id") or "") == str(session["goal_id"])),
+            None,
+        )
+        if goal is None:
+            raise ValueError("goal_id was not found in the active LoopX registry")
+        return _goal_public_context(registry, goal)
+
+    server.delegation_wake_service = DelegationWakeService(
+        server.runtime_controller, goal_context=_wake_goal_context
+    ).start()
     url = f"http://{host}:{port}{DEFAULT_CHAT_PATH}"
     print(f"Serving LoopX Chat at {url}", flush=True)
     print("Agent boundary: local adapters, read-only sandbox, approval policy never", flush=True)

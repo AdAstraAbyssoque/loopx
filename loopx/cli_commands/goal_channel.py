@@ -23,7 +23,9 @@ from ..extensions.lark.goal_channel import (
     setup_lark_goal_channel,
     sync_lark_goal_channel,
 )
-from ..extensions.lark.goal_channel_contracts import binding_for_goal, operation_packet
+from ..extensions.lark.goal_channel_contracts import (
+    binding_for_goal, notification_request_snapshot, operation_packet,
+)
 from ..extensions.lark.goal_topic_batch import upgrade_lark_goal_topics
 from ..extensions.runtime import (
     default_extension_state_file,
@@ -420,11 +422,16 @@ def _quota_packet(
         limit=20,
         goal_id=goal_id,
     )
-    return build_quota_should_run(
+    packet = build_quota_should_run(
         status,
         goal_id=goal_id,
         agent_id=agent_id,
     )
+    # Transport adapter: retain the complete same-read Todo projection only
+    # for this notification. Quota's 180-character hot path stays unchanged;
+    # the shared TS presentation owner checks identity/version/lifecycle.
+    packet["request_snapshot"] = notification_request_snapshot(status, goal_id)
+    return packet
 
 
 def handle_goal_channel_command(
@@ -456,6 +463,27 @@ def handle_goal_channel_command(
         payload = run_goal_channel_runtime(
             args, registry=source_registry, registry_path=source_registry_path
         )
+        print_payload(payload, output_format(args), render_goal_channel_markdown)
+        return 0 if payload.get("ok") else 1
+    if command in {"inspect-operation", "consume-operation", "report-operation"}:
+        # Original-Agent continuations do not call Lark. They must remain
+        # readable/settleable even if that transport extension is unavailable.
+        assert goal_id is not None
+        _, source_path, source_binding, source_root = _source_context(
+            registry=registry,
+            registry_path=registry_path,
+            goal_id=goal_id,
+        )
+        payload = run_goal_channel_operation(
+            args,
+            context=GoalChannelOperationContext(
+                invoked_runtime_root=runtime_root,
+                source_registry_path=source_path,
+                source_runtime_root=source_root,
+                binding_path=source_binding,
+            ),
+        )
+        assert payload is not None
         print_payload(payload, output_format(args), render_goal_channel_markdown)
         return 0 if payload.get("ok") else 1
     if command == "configure" and bool(args.auto_notify_human_gates):

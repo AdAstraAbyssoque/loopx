@@ -1,4 +1,5 @@
 import {manageNewGoalStorage} from "./coordination/local_authority_defaults.ts";
+import {deriveAgentOperationActor, managedOperationBindingCurrent, normalizeAgentOperationExecutor, planAgentOperationHandoff, projectAgentOperationInbox, projectManagedOperationTransport, resolveOperationSourceRoute} from "./work_items/operation_agent_handoff.ts";
 import {projectDecisionNotice} from "./presentation/decision_notice.ts";
 import {normalizeResearchObservation, validateResearchAttribution, projectResearchFrontier} from "./capabilities/explore_research.ts";
 import {projectTodoSummary} from "./todos/summary_projection.ts";
@@ -21,13 +22,13 @@ import {resolveConversationTrigger} from "./collaboration/conversation_trigger.t
 import {admitGoalDraft} from "./collaboration/goal_draft.ts";
 import {planChatMode} from "./collaboration/chat_mode.ts";
 import {resolveConversationScope} from "./collaboration/conversation_scope.ts";
+import {projectConversationReplyContext} from "./collaboration/conversation_reply_context.ts";
 import {planChatTurnAcceptance} from "./turn_driver/chat_turn_acceptance.ts";
 import {previewTeamPlan, planTeamTransaction, teamTransactionIdentity} from "./work_items/team_plan.ts";
 import {commitLocalTeamPlan} from "./work_items/team_plan_authority.ts";
 import {inspectLocalGoalAcceptance, commitLocalGoalAcceptance,
   commitLocalGoalAcceptanceVerification} from "./goals/acceptance_authority.ts";
 import {planLegacyHandoffMode} from "./coordination/handoff_mode_legacy_plan.ts";
-import {planHandoffMode} from "./coordination/handoff_mode_policy.ts";
 import {setLocalHandoffMode} from "./coordination/handoff_mode_runtime.ts";
 import {projectOwnershipObservation} from "./coordination/ownership_observation.ts";
 import {observeLocalCoordinationOwnership} from "./coordination/local_authority_runtime.ts";
@@ -70,6 +71,7 @@ import {
   requireNonEmptyString as requiredString,
   requireStringArray as stringArray,
   requireStringLiteral,
+  requireInteger,
 } from "./runtime_decode.ts";
 import {
   governedCapabilitySettlementStatus,
@@ -160,7 +162,6 @@ import { projectTaskGraphTopology } from "./work_items/task_graph.ts";
 import { projectDeliveryHistory, projectDeliveryResponse } from "./work_items/delivery_history.ts";
 import { validateDeliveryClaim } from "./work_items/delivery_outcome.ts";
 import {
-  evaluateTaskLeaseAcquireDecision,
   evaluateTaskLeaseWriteScopesOverlap,
 } from "./work_items/task_lease_acquire_decision.ts";
 import {executeTaskLeaseAcquire} from "./work_items/task_lease_acquire.ts";
@@ -169,7 +170,6 @@ import {
   readLocalAuthorityShadow,
   recordLocalAuthorityShadow,
 } from "./coordination/local_authority_shadow.ts";
-import { evaluateTaskLeaseLifecycleDecision } from "./work_items/task_lease_lifecycle_decision.ts";
 import {
   bootstrapCoordinationRuntimeShadow,
   commitCoordinationRuntimeShadow,
@@ -202,6 +202,7 @@ import {
 import { evaluateCoordinationTodoArchiveSelection } from "./coordination/todo_archive_selection.ts";
 import {evaluateStandingDecisionProjection} from "./todos/standing_decision.ts";
 import {evaluateDecisionScope} from "./todos/decision_scope.ts";
+import {agentPreferences} from "./capabilities/agent_preferences.ts";
 import {agentCapabilityMemory} from "./agents/capability_memory.ts";
 import {evaluateCapabilityGate} from "./agents/capability_gate.ts";
 import {projectCoordinationSource} from "./coordination/source_projection.ts";
@@ -232,6 +233,8 @@ import {
   normalizeManagerReturnDeliveryAttempt,
 } from "./collaboration/return_delivery.ts";
 import { decideCollaborationLifecycle } from "./collaboration/goal_instance_lifecycle.ts";
+import { inspectCollaborationInboxReceipts } from "./collaboration/inbox_receipts.ts";
+import { selectObservedPeerHostRoute } from "./collaboration/peer_route_selection.ts";
 
 import { normalizeCollaborationRequest } from "./collaboration/semantic_request.ts";
 import {
@@ -477,6 +480,7 @@ export function createEffectRuntimeHandlers(
     ["todo.user_completion.plan", evaluateUserCompletion],
     ["agent.capability_gate.evaluate", evaluateCapabilityGate],
     ["agent.capability_memory", agentCapabilityMemory],
+    ["agent.preferences", agentPreferences],
     ["todo.archive.capture_dependencies", withCoordinationSourceTransfer("todo.archive.capture_dependencies", captureArchivedTodoDependencies)],
     ["agent.supervisor.plan_append", planSupervisorEventAppend],
     ["coordination.source.project", withCoordinationSourceTransfer("coordination.source.project", projectCoordinationSource)],
@@ -574,10 +578,8 @@ export function createEffectRuntimeHandlers(
     ],
     ["quota.turn_envelope.evaluate", evaluateTurnEnvelope],
     ["task_lease.owner_eligibility", evaluateTaskLeaseOwnerEligibility],
-    ["task_lease.acquire.decide", evaluateTaskLeaseAcquireDecision],
     ["task_lease.acquire.native", executeTaskLeaseAcquire],
     ["task_lease.inspect.native", inspectTaskLease],
-    ["task_lease.lifecycle.decide", evaluateTaskLeaseLifecycleDecision],
     ["task_lease.lifecycle.native", executeTaskLeaseLifecycle],
     ["coordination.runtime_shadow.bootstrap", withCoordinationSourceTransfer("coordination.runtime_shadow.bootstrap", bootstrapCoordinationRuntimeShadow)],
     ["coordination.runtime_shadow.commit", withCoordinationSourceTransfer("coordination.runtime_shadow.commit", commitCoordinationRuntimeShadow)],
@@ -602,7 +604,6 @@ export function createEffectRuntimeHandlers(
     ["work_items.team_plan.commit", commitLocalTeamPlan],
     ["coordination.local_authority.todo_update", updateLocalCoordinationTodo],
     ["coordination.local_authority.monitor_poll", pollLocalCoordinationMonitor],
-    ["coordination.handoff_mode.plan", planHandoffMode],
     ["coordination.handoff_mode.legacy_plan", planLegacyHandoffMode],
     ["coordination.local_authority.handoff_mode_set", setLocalHandoffMode],
     ["coordination.local_authority.todo_terminal", terminalLifecycleLocalCoordinationTodo],
@@ -626,7 +627,15 @@ export function createEffectRuntimeHandlers(
     ["quota.monitor_poll.commit", evaluateQuotaMonitorPollCommit],
     ["presentation.decision_notice.project", projectDecisionNotice],
     ["presentation.action_review_plan.compile", (params) =>
-      compileActionReviewPlan(params.proposal)],
+      compileActionReviewPlan(params.proposal, params.now_ms === undefined
+        ? undefined : requireInteger(params.now_ms, "now_ms"))],
+    ["operation.agent_executor.normalize", normalizeAgentOperationExecutor],
+    ["operation.source_route.resolve", resolveOperationSourceRoute],
+    ["operation.managed_binding.current", managedOperationBindingCurrent],
+    ["operation.managed_transport.project", projectManagedOperationTransport],
+    ["operation.agent_handoff.actor", deriveAgentOperationActor],
+    ["operation.agent_handoff.plan", planAgentOperationHandoff],
+    ["operation.agent_handoff.inbox", projectAgentOperationInbox],
     ["scheduler.monitor_successor.plan", planMonitorSuccessor],
     ["scheduler.monitor_target.select", selectMonitorTodoRequest],
     ["capabilities.issue_fix.monitor_reconciliation.plan", planIssueFixMonitorReconciliation],
@@ -741,6 +750,7 @@ export function createEffectRuntimeHandlers(
     ["collaboration.goal_draft", (params) => ({draft: admitGoalDraft(params)})],
     ["collaboration.conversation.trigger", resolveConversationTrigger],
     ["collaboration.conversation.scope", resolveConversationScope],
+    ["collaboration.conversation.reply_context", projectConversationReplyContext],
     ["chat.turn.accept", planChatTurnAcceptance],
     ["collaboration.delegation.observe", transitionDelegationObservation],
     ["collaboration.delegation.recover_validated_settlement", recoverValidatedDelegationSettlement],
@@ -749,6 +759,8 @@ export function createEffectRuntimeHandlers(
       "collaboration.request.normalize",
       (params) => normalizeCollaborationRequest(params.request),
     ],
+    ["collaboration.inbox.inspect_receipts", inspectCollaborationInboxReceipts],
+    ["collaboration.peer_host_route.select", selectObservedPeerHostRoute],
     [
       "collaboration.goal_instance.decide",
       (params) => decideCollaborationLifecycle(params),
