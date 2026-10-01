@@ -277,6 +277,10 @@ assert "loopx.todos" not in sys.modules
 assert "loopx.control_plane.todos.provider_update" not in sys.modules
 assert "loopx.control_plane.todos.provider_create" not in sys.modules
 assert "loopx.control_plane.turn_driver.executor" not in sys.modules
+assert "loopx.dsh_goal_mode.turn_host_adapter" not in sys.modules
+assert "loopx.cli_commands.turn_managed_step" not in sys.modules
+assert "loopx.control_plane.quota.slot_accounting" not in sys.modules
+assert "loopx.control_plane.quota.void_commit" not in sys.modules
 """
 	completed = run_isolated_script(script)
 	assert completed.returncode == 0, completed.stderr
@@ -299,6 +303,34 @@ from loopx.control_plane.todos.list_readback import list_goal_todos
 from loopx.control_plane.goals.state_resolution import resolve_goal_state
 assert todos.list_goal_todos is list_goal_todos
 assert state_refresh.resolve_goal_state is resolve_goal_state
+"""
+	completed = run_isolated_script(script)
+	assert completed.returncode == 0, completed.stderr
+
+
+def test_quota_facade_lazy_exports_preserve_owner_identity() -> None:
+	script = """
+from importlib import import_module
+import sys
+import loopx.quota as facade
+from loopx.control_plane.quota import ledger_readback
+
+assert "loopx.control_plane.quota.slot_accounting" not in sys.modules
+assert "loopx.control_plane.quota.void_commit" not in sys.modules
+assert facade.quota_slot_contribution is ledger_readback.quota_slot_contribution
+assert facade.net_quota_slot_spend is ledger_readback.net_quota_slot_spend
+for name in facade._LAZY_PUBLIC_COMPAT_REEXPORTS:
+    assert name in dir(facade)
+    value = getattr(facade, name)
+    owner = import_module(facade._PUBLIC_COMPAT_REEXPORTS[name])
+    assert value is getattr(owner, name), name
+    assert getattr(facade, name) is value, name
+try:
+    facade.nonexistent_quota_export
+except AttributeError:
+    pass
+else:
+    raise AssertionError("unknown quota exports must fail")
 """
 	completed = run_isolated_script(script)
 	assert completed.returncode == 0, completed.stderr

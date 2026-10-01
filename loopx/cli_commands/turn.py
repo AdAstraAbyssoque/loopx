@@ -44,10 +44,8 @@ from .turn_decision import (
     build_fresh_turn_decision_owner,
     collect_turn_status_payload,
 )
-from .turn_dsh_host import build_dsh_host_runner
 from .turn_registration import register_turn_commands as register_turn_commands
 from .turn_inspection import handle_turn_journal_inspection
-from .turn_managed_step import handle_turn_managed_step
 from .turn_rendering import (
     build_turn_error_payload,
     render_loopx_turn_execution_markdown as _render_loopx_turn_execution_markdown,
@@ -86,6 +84,8 @@ def handle_turn_command(
     if inspection_result is not None:
         return inspection_result
     if args.turn_command == "managed-step":
+        from .turn_managed_step import handle_turn_managed_step
+
         return handle_turn_managed_step(
             args, registry_path=registry_path, runtime_root_arg=runtime_root_arg,
             output_format=output_format, print_payload=print_payload,
@@ -1046,6 +1046,8 @@ def handle_turn_command(
 
                 session_binding_resolver = resolve_built_in_session_binding
             elif args.host == "dsh":
+                from .turn_dsh_host import build_dsh_host_runner
+
                 host_runner = build_dsh_host_runner(
                     args,
                     workspace=project,

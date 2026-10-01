@@ -333,10 +333,14 @@ def test_public_facade_import_only_reexports_match_the_audited_allowlist() -> No
         facade = importlib.import_module(facade_name)
         allowlist = getattr(facade, "_PUBLIC_COMPAT_REEXPORTS")
         import_only_bindings = _public_import_only_bindings(source_path)
+        lazy_exports = getattr(facade, "_LAZY_PUBLIC_COMPAT_REEXPORTS", frozenset())
+        assert lazy_exports <= allowlist.keys()
+        assert not lazy_exports & import_only_bindings.keys()
 
         assert import_only_bindings == {
             export_name: f"{canonical_module}.{export_name}"
             for export_name, canonical_module in allowlist.items()
+            if export_name not in lazy_exports
         }
         for export_name, canonical_module_name in allowlist.items():
             canonical_module = importlib.import_module(canonical_module_name)
