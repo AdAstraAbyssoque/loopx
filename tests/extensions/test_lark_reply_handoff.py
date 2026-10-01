@@ -16,7 +16,7 @@ from loopx.chat_store import ChatSessionStore
 from loopx.extensions.lark.goal_topic_runtime import answer_lark_goal_topic
 
 
-@pytest.mark.parametrize("context_state", ["available", "truncated", "missing", "wrong_room"])
+@pytest.mark.parametrize("context_state", ["available", "truncated", "missing", "wrong_room", "not_a_reply"])
 def test_short_reply_handoff_preserves_source_and_returns_once(
     tmp_path: Path, monkeypatch, context_state: str,
 ) -> None:
@@ -69,13 +69,18 @@ def test_short_reply_handoff_preserves_source_and_returns_once(
             "reply_context": None if context_state == "missing" else quoted,
             "context_materials": [{"content": "Unrelated recent material must not be forwarded."}],
         }
+        if context_state == "not_a_reply":
+            route.pop("parent_id")
         options = dict(route=route, text="Ask the researcher to check this.",
                        work_dir=tmp_path, objective="Inspect the draft.", runtime_controller=controller)
         answer = answer_lark_goal_topic(**options)
         assert "worker" in answer
         entry, = pending(tmp_path, **target)["items"]
         forwarded = entry["message"]
-        assert "Referenced message" in forwarded
+        if context_state == "not_a_reply":
+            assert forwarded == "Ask the researcher to check this."
+        else:
+            assert "Referenced message" in forwarded
         assert forwarded.endswith("Ask the researcher to check this.")
         assert "Unrelated recent material" not in forwarded
         assert "context_handoff" not in forwarded  # Provider's operating prompt is not source context.
@@ -84,7 +89,7 @@ def test_short_reply_handoff_preserves_source_and_returns_once(
             source = json.loads(forwarded.splitlines()[1])
             assert source["complete"] is (context_state == "available")
             assert len(source["content"]) <= 4000
-        else:
+        elif context_state != "not_a_reply":
             assert parent_text not in forwarded
             assert "referent remains unknown" in forwarded
         assert entry["source_id"] == "lark:om_current"
