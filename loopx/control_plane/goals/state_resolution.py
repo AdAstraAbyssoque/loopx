@@ -45,4 +45,3 @@ def resolve_goal_state(
                 f"--state-file {state_file} escapes project root {project}"
             )
     return goal, project, state_file
-

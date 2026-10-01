@@ -227,4 +227,3 @@ def list_goal_todos(
             payload["not_found"] = True
     payload.update(summaries)
     return compact_thin_todo_list_payload(payload) if thin else payload
-
