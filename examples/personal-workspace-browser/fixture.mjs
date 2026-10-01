@@ -870,7 +870,7 @@ export async function installApi(page, { goalSubagentConfigurationEnabled = true
       const offset = Number(url.searchParams.get("cursor") || 0);
       const items = Array.from({ length: Math.min(40, total - offset) }, (_, position) => {
         const index = offset + position;
-        return { todo_id: `todo_history_${index}`, text: index < 3 ? `Completed ${String.fromCharCode(65 + index)}` : `Completed historical Task ${index + 1}`, claimed_by: "example-agent", evidence: null, priority: null, task_class: "advancement_task" };
+        return { todo_id: `todo_history_${index}`, text: index < 3 ? `Completed ${String.fromCharCode(65 + index)}` : `Completed historical Task ${index + 1}`, claimed_by: "example-agent", evidence: index === 0 ? "Verified retained **completion evidence**." : null, priority: null, task_class: "advancement_task" };
       });
       await route.fulfill({ json: { ok: true, total, items, next_cursor: offset + 40 < total ? String(offset + 40) : null } });
       return;

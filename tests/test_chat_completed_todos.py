@@ -100,7 +100,7 @@ def test_goal_report_page_names_unavailable_rows_instead_of_hiding_the_rest(monk
 @pytest.mark.parametrize("archived", [False, True])
 def test_http_history_reads_real_markdown_without_writes(tmp_path, count, archived):
     state = tmp_path / "active.md"
-    text = (f"Inspect {tmp_path}/results.txt " + "complete task description " * 25)[:420]
+    text = f"Inspect {tmp_path}/results.txt " + " ".join(["complete task description"] * 25)
     evidence = f"Verified output at {tmp_path}/results.txt"
     state.write_text("# Synthetic Goal\n\n## Agent Todo\n" + "\n".join(
         f"- [x] {text}{index}\n  <!-- loopx:todo todo_id=todo_history_{index} status=done task_class=advancement_task note={encode_metadata_value(evidence)} -->" for index in range(count)
@@ -135,17 +135,19 @@ def test_http_history_reads_real_markdown_without_writes(tmp_path, count, archiv
         assert len(page["items"]) == 40
         assert page["next_cursor"]
         assert page["items"][0]["text"].startswith(text)
-        assert len(page["items"][0]["text"]) > 400
+        assert len(page["items"][0]["text"]) > 600
         assert page["items"][0]["evidence"] == evidence
         with pytest.raises(HTTPError) as denied:
             urlopen(Request(url, headers={"Origin": "https://unrelated.example"}))
         assert denied.value.code == 403
         ids = [row["todo_id"] for row in page["items"]]
+        assert all(row["text"] == text + row["todo_id"].removeprefix("todo_history_") for row in page["items"])
         from urllib.parse import quote
         while page["next_cursor"]:
             with urlopen(url + "&cursor=" + quote(page["next_cursor"])) as response:
                 page = json.load(response)
             ids.extend(row["todo_id"] for row in page["items"])
+            assert all(row["text"] == text + row["todo_id"].removeprefix("todo_history_") for row in page["items"])
         assert len(ids) == len(set(ids)) == count
         from loopx.todos import list_goal_todos
         active = list_goal_todos(registry_path=registry, goal_id="history-goal", role="agent", status="done")
@@ -173,10 +175,12 @@ def test_canonical_history_includes_archives_without_widening_active_lists(tmp_p
     records = [
         {"schema_version": "todo_item_v0", "todo_id": f"todo_history_{index}",
          "index": index + 1, "role": "agent", "status": "done", "done": True,
-         "text": f"Completed task {index}", "archive_state": "archive" if index < 84 else "active",
+         "text": f"Completed task {index}: " + " ".join(["Full retained task description"] * 20),
+         "archive_state": "archive" if index < 84 else "active",
          "source_section": "Completed Work Archive" if index < 84 else "Agent Todo",
          "task_class": "advancement_task", "claimed_by": "agent-a" if index % 2 else "agent-b",
-         "priority": "P2", "note": "Retain full evidence " + "verified " * 50,
+         "priority": "P2", "required_capabilities": ["local-fixture-capability"],
+         "note": "Retain full evidence " + "verified " * 50,
          "completed_at": f"2026-01-{index % 28 + 1:02d}T00:00:00Z"}
         for index in range(85)
     ]
@@ -196,10 +200,13 @@ def test_canonical_history_includes_archives_without_widening_active_lists(tmp_p
     before = read_canonical_todos_if_promoted(runtime_root=runtime, goal_id="history-goal")
     active = list_goal_todos(registry_path=registry, goal_id="history-goal", role="agent", status="done")
     assert {row["todo_id"] for row in active["todos"]} == {"todo_history_84", "todo_monitor"}
+    assert all(len(row["text"]) <= 500 and row["text"].endswith("…") for row in active["todos"])
     exact = list_goal_todos(registry_path=registry, goal_id="history-goal", todo_id="todo_history_0")
     assert exact["todos"][0]["archive_state"] == "archive"
     with pytest.raises(ValueError, match="requires role=agent and status=done"):
         list_goal_todos(registry_path=registry, goal_id="history-goal", read_scope="completed_history")
+    with pytest.raises(ValueError, match="read_scope must be"):
+        list_goal_todos(registry_path=registry, goal_id="history-goal", read_scope="unknown")
     server = ChatHTTPServer(("127.0.0.1", 0), ChatRequestHandler)
     server.registry_path, server.runtime_root_override, server.verbose = registry, runtime, False
     worker = threading.Thread(target=server.serve_forever, daemon=True)
@@ -221,6 +228,12 @@ def test_canonical_history_includes_archives_without_widening_active_lists(tmp_p
             assert len(rows) == len({row["todo_id"] for row in rows}) == expected
             assert all(row["evidence"] == records[0]["note"] for row in rows)
             assert all(row["priority"] == "P2" for row in rows)
+            source_by_id = {record["todo_id"]: record for record in records}
+            assert all(row["text"] == source_by_id[row["todo_id"]]["text"] for row in rows)
+            # Workspace display retains complete text/evidence, not the
+            # authority's internal capability or lifecycle metadata.
+            assert all(set(row) == {"todo_id", "text", "claimed_by", "evidence", "priority", "task_class"}
+                       for row in rows)
             if suffix:
                 assert all(row["claimed_by"] == "agent-a" for row in rows)
         after = read_canonical_todos_if_promoted(runtime_root=runtime, goal_id="history-goal")
