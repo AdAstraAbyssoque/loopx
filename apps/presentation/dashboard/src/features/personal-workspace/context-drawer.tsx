@@ -42,6 +42,7 @@ import { localizedGoalState, localizedSessionStatus, useWorkspaceI18n } from "./
 import { formatCostUsd, formatDurationMs, formatTokenCount, formatUsageValue } from "./personal-workspace-model";
 import { TeamPlanResult } from "./team-plan-result";
 import { parseTodoResumeCondition } from "./todo-resume-condition";
+import { MarkdownText } from "./markdown";
 
 function subagentModelRequest(include: boolean, model: string, effort: string) {
   if (!include) return {};
@@ -702,6 +703,10 @@ export function ContextDrawer({ agents, attentionHistory = [], onSelectAttention
               </details>
               <button className="personal-primary-action" onClick={() => void previewTodoTransition(selection.item, "complete", t("drawer.taskComplete"))} type="button"><Check size={17} />{t("drawer.taskComplete")}</button>
             </div> : null}
+            {selection.item.evidence ? <section className="personal-detail-card" aria-label={t("drawer.evidence")}>
+              <h4>{t("drawer.evidence")}</h4>
+              <MarkdownText text={selection.item.evidence} />
+            </section> : null}
             {selection.item.done ? <div className="personal-task-completed-note"><Check size={16} /><span><strong>{t("drawer.taskCompletedTitle")}</strong><small>{t("drawer.taskCompletedNote")}</small></span></div> : null}
           </>
         ) : null}
