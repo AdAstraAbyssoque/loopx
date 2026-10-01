@@ -1,4 +1,5 @@
 import { normalizeGoalDraft, type GoalDraft } from "../../../../../loopx/control_plane/collaboration/goal_draft.js";
+import { withTurnActivity, type TurnStep } from "../data/turn-steps";
 import { conversationReturnSessions, reconcileConversationHistory, reconcileConversationReturns } from "../data/conversation-returns";
 import { currentChannelSession, useConversationHistory } from "../data/use-conversation-history";
 import {compactWorkspaceText as compactShareText} from "../features/personal-workspace/personal-workspace-model";
@@ -520,6 +521,7 @@ type PersonalManagerMessage = {
   sourceTurnId?: string;
   sourceCreatedAt?: string;
   activity?: string[];
+  steps?: TurnStep[];
   agentLabel?: string;
   attachments?: WorkspaceImageAttachment[];
   id: number;
@@ -1734,17 +1736,11 @@ function PersonalGoalHome({
                 text: streamedText,
               });
             },
-            onActivity: (label) => {
+            onActivity: (label, step) => {
               setMessagesByContext((messages) => ({
                 ...messages,
                 [targetContextId]: (messages[targetContextId] ?? []).map((message) =>
-                  message.id !== streamingMessageId
-                    ? message
-                    : {
-                        ...message,
-                        updatedAt: Date.now(),
-                        activity: message.activity?.at(-1) === label ? message.activity : [...(message.activity ?? []), label].slice(-6),
-                      }
+                  message.id !== streamingMessageId ? message : withTurnActivity(message, label, step, Date.now())
                 ),
               }));
             },
@@ -2296,17 +2292,11 @@ function PersonalGoalHome({
           streamedText += delta;
           updateConversationMessage(targetContextId, streamingMessageId, { text: streamedText });
         },
-        onActivity: (label: string) => {
+        onActivity: (label: string, step: TurnStep | null) => {
           setMessagesByContext((messages) => ({
             ...messages,
             [targetContextId]: (messages[targetContextId] ?? []).map((message) =>
-              message.id !== streamingMessageId
-                ? message
-                : {
-                    ...message,
-                    updatedAt: Date.now(),
-                    activity: message.activity?.at(-1) === label ? message.activity : [...(message.activity ?? []), label].slice(-6),
-                  }
+              message.id !== streamingMessageId ? message : withTurnActivity(message, label, step, Date.now())
             ),
           }));
         },
@@ -2727,6 +2717,7 @@ function PersonalGoalHome({
         message: {
           createdAt: message.sourceCreatedAt,
           activity: message.activity,
+          steps: message.steps,
           agentLabel: message.agentLabel,
           attachments: message.attachments,
         id: String(message.id),
