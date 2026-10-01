@@ -204,6 +204,16 @@ class CompletedTodoRequestMixin:
                         "evidence": item.get("evidence") or item.get("note") or None,
                         "priority": item.get("priority"),
                         "task_class": item.get("task_class"),
+                        "done": item["done"],
+                        "status": item["status"],
+                        "task_domain": item.get("task_domain"),
+                        "completed_at": item.get("completed_at"),
+                        "resume_when": item.get("resume_when"),
+                        "resume_ready": item.get("resume_ready"),
+                        "resume_condition": item.get("resume_condition"),
+                        "completion_validation_sha256": item.get("completion_validation_sha256"),
+                        "completion_validation_revision": item.get("completion_validation_revision"),
+                        "completion_validation_revision_history": item.get("completion_validation_revision_history") or [],
                     }
                     for _, item in ordered
                     if item.get("todo_id") and item.get("task_class") != "continuous_monitor"
