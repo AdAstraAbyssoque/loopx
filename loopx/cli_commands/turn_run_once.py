@@ -769,7 +769,12 @@ def execute_turn_run_once(
                     )
 
                     return run_codex_operation_host(
-                        request, registry_path=registry_path, **options
+                        request,
+                        registry_path=registry_path,
+                        source_route=getattr(
+                            args, "codex_operation_source_route_json", None
+                        ),
+                        **options,
                     )
                 return run_codex_cli_host(request, **options)
 
