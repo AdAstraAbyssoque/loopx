@@ -451,8 +451,30 @@ managed-step、报告生成/扩展发现及 Lark 发送、采集器、Turn 启�
 实际选中时仍先执行原激活与权限检查，再加载原路由 owner，未激活则在路由加载
 前拒绝。File/SQLite 配对的完整预览结果相同、fixture 未变，但冷/热耗时仍有
 涨有跌，既定全套预算仍失败；这批改动不构成端到端提速验收。
-RPC/导入减少不能代替冷/热延迟及原全套预算验收；下一步仍是固定源码的
-真实预览进程与加载成本，不是第二规划器或权威缓存。R2 持续运行验收保持开放。
+在确切头 `ed673eab6` 的同版本隔离诊断中，每个 provider 六组交替配对、每臂
+六次冷读和十八次热读，均执行原 CLI main：File 热读中位数 1.643→0.306s，
+SQLite 1.003→0.284s，完整公开结果相同、fixture 未变。这定位每次 Python CLI
+启动和源码加载成本，只是反事实，不是已交付传输或 base/head 提速验收。
+冷读仍慢，File 冷读最大值反而 2.412→2.749s；未控制共享宿主负载。
+55 次 TS 请求已共享同一次逻辑请求源码指纹，不是 55 次哈希；另做清缓存对照后，
+原八线程源码读取优于串行，保留原并发策略。
+RPC/导入减少不能替代原全套预算验收。下一步沿现有 canonical Turn/TS owner
+实现完整切片，明确 workspace/Goal/调用方隔离、每次新鲜权限与验收读取、源码
+升级失效、超时/取消与进程恢复；不另建 Python 规划器或缓存成功判决。
+R2 持续运行验收保持开放。
+
+English: The isolated same-revision diagnostic at `ed673eab6` uses six alternating
+pairs per provider (six cold/eighteen warm samples per arm), executing original
+CLI main. Warm medians are File 1.643→0.306s and SQLite 1.003→0.284s with complete
+output equality and unchanged fixtures. This is a process-policy counterfactual,
+not shipped transport or base/head speed qualification. Cold latency remains
+substantial; File cold maximum regresses 2.412→2.749s, and shared-host load is not
+controlled. The 55 TS requests already share one logical source fingerprint;
+cache-cleared measurement retains the existing eight source readers. The next
+slice reuses canonical Turn/TS owners with workspace/Goal/caller isolation,
+fresh authority/validation reads, source invalidation, timeout/cancellation and
+process recovery. No second Python planner or verdict cache; original suite
+budget and R2 acceptance remain open.
 
 同一 owner 本地面板可打开当前核验产物正文、版本及来源标识，向原协调员收件箱
 反馈，并显示协调员暂停的实际范围。读取失效时清除旧内容；投递不等于应用、验收

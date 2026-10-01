@@ -306,6 +306,7 @@ def test_lazy_report_and_lark_exports_preserve_original_owner_identity() -> None
     renderers = importlib.import_module("loopx.presentation.renderers")
     lark_reports = importlib.import_module("loopx.extensions.lark.presentation")
     lark_commands = importlib.import_module("loopx.cli_commands.lark_inbox")
+    report_requests = importlib.import_module("loopx.capabilities.periodic_report.request_action")
     assert set(reports._EXPORTS) == set(reports.__all__)
     assert set(renderers._EXPORTS) == set(renderers.__all__)
     # Independently pin the former eager exports, rather than allowing a
@@ -333,6 +334,10 @@ def test_lazy_report_and_lark_exports_preserve_original_owner_identity() -> None
         (lark_reports, dict.fromkeys(lark_reports.__all__, "periodic_report"),
          lark_reports.__name__),
         (lark_commands, lark_commands._LAZY_HOST_EXPORTS, ""),
+        (report_requests, {
+            "discover_extension_hook_adapters": "loopx.extensions.hook_adapters",
+            "default_extension_state_file": "loopx.extensions.runtime",
+        }, ""),
     ):
         assert set(exports) <= set(dir(facade))
         for name, owner in exports.items():
