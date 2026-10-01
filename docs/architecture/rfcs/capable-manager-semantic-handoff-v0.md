@@ -469,13 +469,17 @@ context. The shared TS conversation projection joins the captured parent ID and
 conversation ID, bounds quoted text and exposes missing or truncated context.
 The Lark collector preserves its existing parent lookup as a private inbox
 observation; manager and ordinary Goal Topic Turns consume the same projection.
+A queued handoff also retains that exact projection in the provider-authored
+source message delivered to the receiver. Missing ancestry and truncation remain
+visible; provider instructions and unrelated recent material are not forwarded.
 A parent-bearing mention also requires lookup. No extra history sweep, text
 classifier or execution grant is introduced. A captured quote is not approval,
 fresh fact verification or a new instruction. Unknown ancestry stays unknown;
 recent material cannot silently substitute for it.
 
-This qualifies collector→inbox→real Chat store/protocol ingress with synthetic
-provider/model fixtures, including replay. It does not qualify live referent
+This qualifies collector→inbox→real Chat store/protocol ingress and queued
+handoff→receiver assessment→original return with synthetic provider/model and
+portfolio fixtures, including replay. It does not qualify live referent
 reasoning, deployed group adoption or the whole handoff. App conversation history
 continues through its existing owner; no App input or opening layout changes in
 this adapter slice. R3 next qualifies installed source readback and the receiver's
