@@ -8,12 +8,93 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
+use std::time::{Duration, Instant};
 use tauri::{
     ipc::CapabilityBuilder, AppHandle, Manager, RunEvent, Url, WebviewUrl, WebviewWindowBuilder,
 };
 use tauri_plugin_notification::NotificationExt;
 
 const APP_IDENTIFIER: &str = "io.loopx.control-plane";
+
+// Service readiness does not acknowledge a WebKit navigation: a listener can
+// restart between the probe and the page request, leaving the boot page intact.
+// Keep that handoff pending until the window actually reaches the workspace.
+// This is local shell state, not a new service or maintenance protocol.
+struct WorkspaceHandoff {
+    boot_url: Url,
+    pending: bool,
+    reload_workspace: bool,
+    last_check: Option<Instant>,
+}
+
+impl WorkspaceHandoff {
+    const RETRY_INTERVAL: Duration = Duration::from_secs(2);
+
+    fn new(boot_url: Url) -> Self {
+        Self {
+            boot_url,
+            pending: true,
+            reload_workspace: false,
+            last_check: None,
+        }
+    }
+
+    fn reconnect(&mut self) {
+        self.pending = true;
+        self.reload_workspace = true;
+        self.last_check = None;
+    }
+
+    fn due(&self, now: Instant) -> bool {
+        self.pending
+            && self.last_check.map_or(true, |last| {
+                now.duration_since(last) >= Self::RETRY_INTERVAL
+            })
+    }
+
+    fn needs_navigation(&mut self, now: Instant, current: Option<&Url>, target: &Url) -> bool {
+        if !self.due(now) {
+            return false;
+        }
+        self.last_check = Some(now);
+        let Some(current) = current else {
+            // An unreadable URL is not permission to replace the user's page.
+            return false;
+        };
+        if current.origin() == target.origin() {
+            if self.reload_workspace {
+                self.reload_workspace = false;
+                return true;
+            }
+            self.pending = false;
+            return false;
+        }
+        // Custom schemes have opaque origins; compare the captured boot URL
+        // itself instead of treating every opaque origin as the same page.
+        if current == &self.boot_url {
+            self.reload_workspace = false;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn reconcile(&mut self, app: &AppHandle, target: &Url) {
+        let now = Instant::now();
+        if !self.due(now) {
+            return;
+        }
+        if let Some(window) = app.get_webview_window("main") {
+            let current = window.url().ok();
+            if self.needs_navigation(now, current.as_ref(), target) {
+                if let Err(error) = window.navigate(target.clone()) {
+                    self.reload_workspace = true;
+                    eprintln!("LoopX workspace navigation failed: {error}");
+                }
+            }
+        }
+    }
+}
 
 fn maintenance_origin(url: &Url) -> String {
     // Custom-protocol IPC carries the HTTP Origin header (no /chat/ path).
@@ -91,14 +172,16 @@ pub fn run() {
                     .window("main"),
             )?;
 
-            WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-                .title("LoopX")
-                .inner_size(1280.0, 820.0)
-                .min_inner_size(960.0, 640.0)
-                .on_navigation(move |url| {
-                    url.scheme() == "tauri" || url.origin() == navigation_origin.origin()
-                })
-                .build()?;
+            let window =
+                WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+                    .title("LoopX")
+                    .inner_size(1280.0, 820.0)
+                    .min_inner_size(960.0, 640.0)
+                    .on_navigation(move |url| {
+                        url.scheme() == "tauri" || url.origin() == navigation_origin.origin()
+                    })
+                    .build()?;
+            let mut handoff = WorkspaceHandoff::new(window.url()?);
 
             let handle = app.handle().clone();
             std::thread::spawn(move || {
@@ -114,8 +197,10 @@ pub fn run() {
                                 // after the workspace has already been opened.
                                 // Drop only processes owned by this App.
                                 *current = None;
+                                handoff.reconnect();
                             } else {
                                 drop(current);
+                                handoff.reconcile(&handle, &origin);
                                 std::thread::sleep(std::time::Duration::from_millis(200));
                                 continue;
                             }
@@ -133,6 +218,7 @@ pub fn run() {
                             }
                             let healed = started.healed;
                             *services_for_setup.lock().expect("service state lock") = Some(started);
+                            handoff.reconcile(&handle, &origin);
                             if healed {
                                 let _ = handle
                                     .notification()
@@ -140,9 +226,6 @@ pub fn run() {
                                     .title("LoopX")
                                     .body("已自动升级到当前 LoopX 版本，服务已重启。")
                                     .show();
-                            }
-                            if let Some(window) = handle.get_webview_window("main") {
-                                let _ = window.navigate(origin.clone());
                             }
                         }
                         Err(error) => {
@@ -188,6 +271,72 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
+    use super::WorkspaceHandoff;
+    use std::time::Instant;
+    use tauri::Url;
+
+    #[test]
+    fn failed_workspace_load_retries_from_boot_until_the_window_opens() {
+        let boot: Url = "tauri://localhost/index.html".parse().unwrap();
+        let target: Url = "http://127.0.0.1:8767/chat/".parse().unwrap();
+        let mut handoff = WorkspaceHandoff::new(boot.clone());
+        let now = Instant::now();
+        assert!(handoff.needs_navigation(now, Some(&boot), &target));
+        // A successful navigate() call only queues the request. A refused
+        // connection leaves WebKit on boot; service readiness cannot ACK it.
+        assert!(!handoff.needs_navigation(now, Some(&boot), &target));
+        let retry = now + WorkspaceHandoff::RETRY_INTERVAL;
+        assert!(handoff.needs_navigation(retry, Some(&boot), &target));
+        let opened: Url = "http://127.0.0.1:8767/chat/?goal=example".parse().unwrap();
+        let confirmed = retry + WorkspaceHandoff::RETRY_INTERVAL;
+        assert!(!handoff.needs_navigation(confirmed, Some(&opened), &target));
+        assert!(!handoff.due(confirmed + WorkspaceHandoff::RETRY_INTERVAL));
+    }
+
+    #[test]
+    fn handoff_does_not_replace_unknown_or_foreign_pages() {
+        let boot: Url = "tauri://localhost/index.html".parse().unwrap();
+        let target: Url = "http://127.0.0.1:8767/chat/".parse().unwrap();
+        let mut handoff = WorkspaceHandoff::new(boot);
+        let mut now = Instant::now();
+        assert!(!handoff.needs_navigation(now, None, &target));
+        for page in [
+            "https://example.com/",
+            "http://127.0.0.1:8766/chat/",
+            "tauri://another-app/index.html",
+            "tauri://localhost/another-page.html",
+        ] {
+            now += WorkspaceHandoff::RETRY_INTERVAL;
+            let current: Url = page.parse().unwrap();
+            assert!(!handoff.needs_navigation(now, Some(&current), &target));
+        }
+    }
+
+    #[test]
+    fn repair_reloads_an_open_workspace_once_and_rearms_failed_boot_handoff() {
+        let boot: Url = "http://tauri.localhost/index.html".parse().unwrap();
+        let target: Url = "http://127.0.0.1:8767/chat/".parse().unwrap();
+        let mut handoff = WorkspaceHandoff::new(boot.clone());
+        let now = Instant::now();
+        assert!(!handoff.needs_navigation(now, Some(&target), &target));
+        handoff.reconnect();
+        assert!(handoff.needs_navigation(now, Some(&target), &target));
+        let later = now + WorkspaceHandoff::RETRY_INTERVAL;
+        assert!(!handoff.needs_navigation(later, Some(&target), &target));
+        handoff.reconnect();
+        assert!(handoff.needs_navigation(later, Some(&boot), &target));
+        assert!(handoff.needs_navigation(
+            later + WorkspaceHandoff::RETRY_INTERVAL,
+            Some(&boot),
+            &target,
+        ));
+        assert!(!handoff.needs_navigation(
+            later + WorkspaceHandoff::RETRY_INTERVAL * 2,
+            Some(&target),
+            &target,
+        ));
+    }
+
     #[test]
     fn maintenance_acl_accepts_both_transports_only_on_the_app_origin() {
         use tauri::utils::acl::RemoteUrlPattern;
