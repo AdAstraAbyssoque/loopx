@@ -325,7 +325,11 @@ The representative request falls from over 2 MiB to about 0.96 MB without raisin
 budgets. Real File/SQLite CLI tests cover exact counts, distant inferred edges,
 metadata preservation and unchanged provider state. This is a bounded capacity
 repair, not unlimited graph capacity, stable latency evidence, D2 qualification
-or permission to change the default provider. The completed-history consumer
+or permission to change the default provider.
+
+### Retained completion consumption
+
+The completed-history consumer
 now explicitly reads retained active and archived records through the existing
 typed summary/filter owner. Previously, archiving 84 of 85 completions made
 the workspace history return only one row. Its bounded HTTP pages now include
@@ -336,6 +340,11 @@ archives and retain their display limit. Real File/SQLite and legacy Markdown
 reads preserve provider state. The packaged workspace keeps its existing
 pagination and opens retained evidence in the read-only Todo inspector using
 the shared Markdown renderer, without another navigation step or edit action.
+History also preserves completion time, resume facts and validation-declaration
+revision/actor facts. Active and history consumers reuse the same TS inspector
+mapping and the existing Todo schema; the active queue's preview budgets remain
+unchanged. Unprovided dependencies are not presented as an empty dependency
+list, and absent resume readiness or validation revisions are not invented.
 This closes that history-enumeration/detail gap, not whole-Goal summary/list/detail
 adoption, sustained observation, D2 or default-provider admission. No persisted
 format, writer or PostgreSQL consumer is changed.

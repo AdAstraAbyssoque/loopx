@@ -184,6 +184,17 @@ def test_canonical_history_includes_archives_without_widening_active_lists(tmp_p
          "completed_at": f"2026-01-{index % 28 + 1:02d}T00:00:00Z"}
         for index in range(85)
     ]
+    records[0].update({
+        "task_domain": "quality",
+        "resume_when": "todo_done:todo_history_84",
+        "completion_validation_sha256": "a" * 64,
+        "completion_validation_revision": 3,
+        "completion_validation_revision_history": [{
+            "revision": 3, "previous_declaration_sha256": "b" * 64,
+            "declaration_sha256": "a" * 64, "actor_agent_id": "agent-a",
+            "revised_at": "2026-01-01T00:00:00Z",
+        }],
+    })
     records.extend([
         {**records[-1], "todo_id": "todo_monitor", "task_class": "continuous_monitor"},
         {**records[-1], "todo_id": "todo_open", "status": "open", "done": False},
@@ -230,10 +241,19 @@ def test_canonical_history_includes_archives_without_widening_active_lists(tmp_p
             assert all(row["priority"] == "P2" for row in rows)
             source_by_id = {record["todo_id"]: record for record in records}
             assert all(row["text"] == source_by_id[row["todo_id"]]["text"] for row in rows)
-            # Workspace display retains complete text/evidence, not the
-            # authority's internal capability or lifecycle metadata.
-            assert all(set(row) == {"todo_id", "text", "claimed_by", "evidence", "priority", "task_class"}
-                       for row in rows)
+            assert all(row["completed_at"] == source_by_id[row["todo_id"]]["completed_at"] for row in rows)
+            assert all(row["done"] is True and row["status"] == "done" for row in rows)
+            # Existing inspector facts travel with their source, while private
+            # execution declarations and capability metadata remain excluded.
+            assert all("required_capabilities" not in row and "completion_validation" not in row for row in rows)
+            if not suffix:
+                detail = next(row for row in rows if row["todo_id"] == "todo_history_0")
+                assert detail["task_domain"] == "quality"
+                assert detail["resume_when"] == "todo_done:todo_history_84"
+                assert detail["resume_ready"] is True
+                assert detail["completion_validation_sha256"] == "a" * 64
+                assert detail["completion_validation_revision"] == 3
+                assert detail["completion_validation_revision_history"] == records[0]["completion_validation_revision_history"]
             if suffix:
                 assert all(row["claimed_by"] == "agent-a" for row in rows)
         after = read_canonical_todos_if_promoted(runtime_root=runtime, goal_id="history-goal")
