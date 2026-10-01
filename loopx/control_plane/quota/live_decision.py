@@ -492,6 +492,7 @@ def build_live_quota_should_run_decision(
     interaction_projection_hooks: Sequence[InteractionProjectionHookRegistration]
     | None = None,
     turn_start_hook_dispatch: Mapping[str, Any] | None = None,
+    workspace_path: Path | None = None,
 ) -> dict[str, Any]:
     """Build one live CLI decision while keeping host observation injectable."""
     resolved_context = resolve_scheduler_execution_context(scheduler_execution_context)
@@ -610,6 +611,7 @@ def build_live_quota_should_run_decision(
         receipt_bound_replan_guard_scoped=receipt_bound_replan_guard_scoped,
         turn_instance_id=turn_instance_id,
         runtime_root=runtime_root,
+        workspace_path=workspace_path,
     )
     _apply_retained_action_selection_reentry(
         payload,

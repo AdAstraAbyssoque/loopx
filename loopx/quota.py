@@ -903,6 +903,7 @@ def build_quota_should_run(
     receipt_bound_replan_guard_scoped: bool = False,
     turn_instance_id: str | None = None,
     runtime_root: str | Path | None = None,
+    workspace_path: Path | None = None,
 ) -> dict[str, Any]:
     from .control_plane.quota.should_run import (
         build_quota_should_run as _build_quota_should_run,
@@ -928,6 +929,7 @@ def build_quota_should_run(
         receipt_bound_replan_guard_scoped=receipt_bound_replan_guard_scoped,
         turn_instance_id=turn_instance_id,
         runtime_root=runtime_root,
+        workspace_path=workspace_path,
     )
 
 

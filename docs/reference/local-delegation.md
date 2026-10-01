@@ -414,6 +414,22 @@ through `turn run-once` without `--execute`. It creates no request or Turn,
 does not invoke the host and spends no quota. Host arguments that enable
 execution or retarget the selected work are rejected before the subprocess.
 
+The original workspace guard evaluates `turn run-once` against its explicit
+`--project`, including the scheduler's later decision read. An allowed caller
+directory cannot authorize a different execution destination. Commands without
+a run-once project retain their invocation-directory boundary. This corrects
+the former ambient-directory dependency; it does not change workspace rules,
+binding grants or acceptance. Structured-handler tests exercise the same owner
+from another service directory and concurrent independent registries, but the
+production preview still uses its pinned subprocess and existing timeout.
+Those tests are not evidence that process reuse or the latency target has shipped.
+
+中文：原工作区 guard 按 `turn run-once` 的显式 `--project` 校验，包括随后 scheduler
+的决策重读；合格的调用者目录不能授权另一个执行目标。没有 run-once project 的命令
+保留调用目录边界。这修复原先对进程目录的隐式依赖，不改工作区规则、binding grant
+或验收。结构化 handler 测试从不同服务目录、并发独立注册表调用同一 owner；生产预览
+仍使用固定 release 子进程和原超时保护，测试通过不代表进程复用或耗时目标已交付。
+
 Inspection and its Turn preview load their existing command registrars, not
 unrelated CLI owners. One inspection reuses only the executable TS source
 revision within that logical request; it does not cache binding, acceptance,
