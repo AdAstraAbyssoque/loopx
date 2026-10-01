@@ -47,9 +47,10 @@ impl WorkspaceHandoff {
 
     fn due(&self, now: Instant) -> bool {
         self.pending
-            && self.last_check.map_or(true, |last| {
-                now.duration_since(last) >= Self::RETRY_INTERVAL
-            })
+            && match self.last_check {
+                Some(last) => now.duration_since(last) >= Self::RETRY_INTERVAL,
+                None => true,
+            }
     }
 
     fn needs_navigation(&mut self, now: Instant, current: Option<&Url>, target: &Url) -> bool {
