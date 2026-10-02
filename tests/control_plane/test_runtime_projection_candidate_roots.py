@@ -71,19 +71,18 @@ def test_two_declared_mirrors_remain_ambiguous(conflicting_defaults, tmp_path):
 
 
 def test_explicit_candidates_do_not_inspect_default_stores(conflicting_defaults, tmp_path, monkeypatch):
-    from loopx.control_plane.runtime import runtime_projection_route as owner
-
     def forbidden():
         pytest.fail("explicit candidates must not inspect machine defaults")
 
-    monkeypatch.setattr(owner, "default_runtime_route", forbidden)
+    monkeypatch.setattr(paths, "default_runtime_route", forbidden)
     source = tmp_path / "source"
     assert runtime_projection_candidate_roots(source_runtime_root=source,
         candidate_roots=[source]) == [source]
 
 
-def test_invalid_default_route_stays_refused(conflicting_defaults):
+def test_invalid_default_does_not_override_explicit_source(conflicting_defaults):
     current, legacy = conflicting_defaults
     (current / "registry.global.json").symlink_to(legacy / "missing.json")
     with pytest.raises(ValueError, match="not a regular file"):
-        runtime_projection_candidate_roots(source_runtime_root=legacy)
+        paths.select_default_runtime_root()
+    assert runtime_projection_candidate_roots(source_runtime_root=legacy) == [current, legacy]

@@ -14,7 +14,8 @@ from ..goals.activation import (
     normalize_goal_activation_state,
 )
 from ...history import load_index, load_registry
-from ...paths import default_runtime_route, global_registry_path, resolve_runtime_root
+from ... import paths
+from ...paths import global_registry_path, resolve_runtime_root
 from ...registry import registry_goals
 
 
@@ -240,16 +241,11 @@ def runtime_projection_candidate_roots(
         configured = str(os.environ.get("LOOPX_RUNTIME_ROOT") or "").strip()
         if configured:
             roots.append(Path(configured).expanduser())
-        route = default_runtime_route()
-        if route["status"] == "invalid":
-            raise ValueError(str(route["recommended_action"]))
-        # Discovery is not implicit authority selection. An explicitly bound
-        # source remains usable when both default stores exist; inspect both
-        # registries and let the existing source_registry matching reject an
-        # ambiguous or missing mirror. Never choose one default or migrate it.
-        roots.append(Path(str(route["selected_runtime_root"])))
-        if route["status"] == "conflict":
-            roots.append(Path(str(route["legacy_runtime_root"])))
+        # Discovery inspects candidates; it does not select an implicit write
+        # authority. An explicitly routed command must remain usable while the
+        # two machine roots coexist. Duplicate declarations are classified by
+        # resolve_runtime_projection_route rather than hidden by choosing one.
+        roots.extend((paths.DEFAULT_RUNTIME_ROOT, paths.LEGACY_RUNTIME_ROOT))
     else:
         roots.extend(Path(root).expanduser() for root in candidate_roots)
     roots.append(source_runtime_root.expanduser())

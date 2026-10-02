@@ -92,6 +92,36 @@ def fresh_cli(runner, binding, *argv, timeout=60):
     return json.loads(completed.stdout)
 
 
+@pytest.mark.parametrize("arguments", [
+    ("turn", "run-once"),
+    ("turn", "run-once", "--execute"),
+    ("turn", "run-once", "--resume-turn-key", "existing"),
+])
+def test_leased_commands_keep_host_supervision_not_preview(service, monkeypatch, arguments):
+    _, runner = service
+    binding = runner.binding("analysis", require_active=True)
+    lease_context = {"lease": {"idempotency_key": "original-execution"}}
+    calls = []
+
+    def supervised(argv, **kwargs):
+        calls.append((argv, kwargs))
+        kwargs["on_stdout"]('{"original_leased_host":true}')
+        return {"outcome": "exited", "output_complete": True, "returncode": 0}
+
+    def wrong_transport(*args, **kwargs):
+        pytest.fail("leased command lost its original Host supervision")
+
+    monkeypatch.setattr("loopx.control_plane.turn_driver.host_process_transport.run_host_process", supervised)
+    monkeypatch.setattr("loopx.collaboration_mcp.subprocess.run", wrong_transport)
+    monkeypatch.setattr(runner._preview_transport, "preview", wrong_transport)
+    assert runner._cli(binding, *arguments, delegated_lease=lease_context) == {"original_leased_host": True}
+    assert len(calls) == 1 and calls[0][0][-len(arguments):] == list(arguments)
+    assert "loopx.control_plane.turn_driver.delegated_cli" in calls[0][0]
+    assert calls[0][1]["delegated_lease"] is lease_context
+    assert calls[0][1]["project"] == Path(binding["workspace"])
+    assert runner._preview_transport._process is None
+
+
 def test_reused_preview_matches_fresh_cli_and_rereads_validator_and_goal(service, monkeypatch):
     root, runner = service
     reused = runner._cli

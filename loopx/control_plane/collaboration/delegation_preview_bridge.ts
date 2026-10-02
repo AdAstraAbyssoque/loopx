@@ -54,7 +54,7 @@ async function accept(value: unknown) {
         if (response.id >= MAX_REQUESTS) stop("retired");
         else if (!pending) armIdle();
       }
-    }, owner.signal, input => { write = input; });
+    }, owner.signal, undefined, input => { write = input; });
     void running.then(async result => {
       const originalPending = pending;
       stop(result.outcome);
