@@ -606,8 +606,8 @@ File's cold maximum regresses (2.412→2.749s); shared-host load is not controll
 The 55 TS requests do not imply 55 source hashes: they already share one logical
 request fingerprint. A separately cache-cleared source-read probe favors the
 existing eight readers over one; no serial-read policy is adopted.
-The original frozen whole-suite budget remains open. The next implementation
-must reuse the existing canonical Turn/TS owners, with explicit workspace/Goal/
+The original frozen whole-suite budget remains open. That diagnostic called for
+reuse of the existing canonical Turn/TS owners, with explicit workspace/Goal/
 caller isolation, fresh authority and validation reads, source-release
 invalidation, timeout/cancellation and process recovery. Do not replace this
 with a second Python planner or cached verdict. Sustained R2 qualification
@@ -631,10 +631,35 @@ SQLite 1.003→0.284s，完整公开结果相同、fixture 未变。这定位每
 冷读仍慢，File 冷读最大值反而 2.412→2.749s；未控制共享宿主负载。
 55 次 TS 请求已共享同一次逻辑请求源码指纹，不是 55 次哈希；另做清缓存对照后，
 原八线程源码读取优于串行，保留原并发策略。
-RPC/导入减少不能替代原全套预算验收。下一步沿现有 canonical Turn/TS owner
+RPC/导入减少不能替代原全套预算验收。该诊断要求沿现有 canonical Turn/TS owner
 实现完整切片，明确 workspace/Goal/调用方隔离、每次新鲜权限与验收读取、源码
 升级失效、超时/取消与进程恢复；不另建 Python 规划器或缓存成功判决。
 原调用方与既定验收未证明前，持续运行的 R2 验收仍开放。
+
+2026-10-02 draft checkpoint: #5283 now implements private read-only preview
+process reuse under the existing TS Host process supervisor. The pinned Python
+worker is an IO adapter that re-enters the original CLI/Turn decision owners for
+every request, not another planner or a cached verdict. A fixed workspace,
+registry/runtime/Goal/agent/Todo partition, source/environment invalidation,
+bounded startup and request deadlines, output caps and descendant cleanup are
+part of this slice; execute/resume/mutations retain their original transport.
+This targets warm inspection in a continuous MCP/HTTP service; a fresh CLI still
+pays cold startup, and the bridge adds a cold cost. The PR records exact-head
+parity, real MCP, cancellation and paired timing evidence separately. Discovering
+projection candidates does not select a machine default: two existing stores
+are checked against their declared source registry, and multiple matching mirrors
+remain ambiguous. No machine state is migrated. The original whole-suite budget,
+real caller adoption and sustained R2 acceptance remain open; no installation,
+G1/G3 promotion or end-to-end financial-loop completion is claimed.
+中文：2026-10-02 草稿检查点，#5283 已实现由现有 TS Host 进程监督器管理的私有
+只读预检进程复用。固定 Python worker 只是 IO 适配器，每次重新进入原 CLI/Turn
+决策 owner，不是另一个规划器或判决缓存。固定工作区与 registry/runtime/Goal/
+Agent/Todo 分区、源码和环境失效、启动及请求期限、输出上限与子孙进程清理均属于
+本切片；执行、恢复和写入保留原传输。目标是持续 MCP/HTTP 服务的热预检，独立 CLI
+仍支付冷启动，桥接还会增加冷成本。确切头上的结果等价、真实 MCP、取消与配对
+计时分别记录在 PR。投影候选发现不选择机器默认源：两个现有目录按声明的源注册表
+核对，多重匹配仍判歧义，不迁移机器状态。原全套预算、真实调用方采用和 R2 持续
+运行验收仍开放；不声称安装、G1/G3 晋级或金融最小闭环完成。
 
 The same owner-local panel now opens current validated artifact text and its
 version/source identifiers, accepts feedback through the original coordinator

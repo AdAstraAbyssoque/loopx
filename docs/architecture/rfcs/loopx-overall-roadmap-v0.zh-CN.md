@@ -458,7 +458,7 @@ SQLite 1.003→0.284s，完整公开结果相同、fixture 未变。这定位每
 冷读仍慢，File 冷读最大值反而 2.412→2.749s；未控制共享宿主负载。
 55 次 TS 请求已共享同一次逻辑请求源码指纹，不是 55 次哈希；另做清缓存对照后，
 原八线程源码读取优于串行，保留原并发策略。
-RPC/导入减少不能替代原全套预算验收。下一步沿现有 canonical Turn/TS owner
+RPC/导入减少不能替代原全套预算验收。该诊断要求沿现有 canonical Turn/TS owner
 实现完整切片，明确 workspace/Goal/调用方隔离、每次新鲜权限与验收读取、源码
 升级失效、超时/取消与进程恢复；不另建 Python 规划器或缓存成功判决。
 R2 持续运行验收保持开放。
@@ -470,11 +470,33 @@ output equality and unchanged fixtures. This is a process-policy counterfactual,
 not shipped transport or base/head speed qualification. Cold latency remains
 substantial; File cold maximum regresses 2.412→2.749s, and shared-host load is not
 controlled. The 55 TS requests already share one logical source fingerprint;
-cache-cleared measurement retains the existing eight source readers. The next
-slice reuses canonical Turn/TS owners with workspace/Goal/caller isolation,
+cache-cleared measurement retains the existing eight source readers. That
+diagnostic called for canonical Turn/TS owner reuse with workspace/Goal/caller isolation,
 fresh authority/validation reads, source invalidation, timeout/cancellation and
 process recovery. No second Python planner or verdict cache; original suite
 budget and R2 acceptance remain open.
+
+2026-10-02 草稿检查点：#5283 已实现由现有 TS Host 进程监督器管理的私有只读预检
+进程复用。固定 Python worker 仅为 IO 适配器，每次重新进入原 CLI/Turn 决策 owner，
+不另建规划器、不缓存判决。固定工作区及 registry/runtime/Goal/Agent/Todo 分区、
+源码和环境失效、启动与请求期限、输出上限及子孙进程清理均在本切片；执行、恢复和
+写入保留原传输。收益针对持续 MCP/HTTP 服务的热预检；独立 CLI 仍支付冷启动，
+桥接也会增加冷成本。PR 分别记录确切头上的结果等价、真实 MCP、取消与配对计时。
+投影候选发现不选择机器默认源：两个现有目录按声明的源注册表核对，多重匹配仍判
+歧义，不迁移机器状态。原全套预算、真实调用方采用与 R2 持续运行验收仍开放；
+不声称安装、G1/G3 晋级或金融最小闭环完成。
+English: The 2026-10-02 draft slice implements private read-only preview process
+reuse under the existing TS Host supervisor. Its pinned Python worker is only an
+IO adapter, re-entering original CLI/Turn owners each time, with fixed workspace
+and authority partitions, source/environment invalidation, bounded startup and
+request deadlines, output caps and descendant cleanup. Execute/resume/mutations
+retain original transport. This targets warm MCP/HTTP service inspection; fresh
+CLI startup and an added cold bridge cost remain. The PR separates exact-head
+parity, real MCP, cancellation and paired timing evidence. Projection discovery
+checks both existing stores against declared source registries without selecting
+a default; multiple matching mirrors stay ambiguous and nothing is migrated.
+Original suite budget, real caller adoption and sustained R2 acceptance remain
+open; no installation, G1/G3 promotion or financial-loop completion is claimed.
 
 同一 owner 本地面板可打开当前核验产物正文、版本及来源标识，向原协调员收件箱
 反馈，并显示协调员暂停的实际范围。读取失效时清除旧内容；投递不等于应用、验收

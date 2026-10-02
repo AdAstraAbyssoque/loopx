@@ -1519,7 +1519,7 @@
     },
     {
       "site": "loopx/control_plane/runtime/runtime_projection_route.py::<module>._read_source_registry_with_deadline.read::codec_read:load_registry#1",
-      "line": 571,
+      "line": 580,
       "column": 23,
       "kind": "codec_read",
       "api": "load_registry",
@@ -1527,7 +1527,7 @@
     },
     {
       "site": "loopx/control_plane/runtime/runtime_projection_route.py::<module>._source_routes_for_registry::codec_read:load_registry#1",
-      "line": 507,
+      "line": 516,
       "column": 20,
       "kind": "codec_read",
       "api": "load_registry",
@@ -1535,7 +1535,7 @@
     },
     {
       "site": "loopx/control_plane/runtime/runtime_projection_route.py::<module>.collect_runtime_projection_route_diagnostics::codec_read:load_registry#1",
-      "line": 615,
+      "line": 624,
       "column": 20,
       "kind": "codec_read",
       "api": "load_registry",
@@ -1559,7 +1559,7 @@
     },
     {
       "site": "loopx/control_plane/runtime/runtime_projection_route.py::<module>.resolve_runtime_projection_route::codec_read:load_registry#1",
-      "line": 311,
+      "line": 320,
       "column": 31,
       "kind": "codec_read",
       "api": "load_registry",

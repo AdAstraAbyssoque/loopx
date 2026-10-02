@@ -14,7 +14,7 @@ from ..goals.activation import (
     normalize_goal_activation_state,
 )
 from ...history import load_index, load_registry
-from ...paths import global_registry_path, resolve_runtime_root, select_default_runtime_root
+from ...paths import default_runtime_route, global_registry_path, resolve_runtime_root
 from ...registry import registry_goals
 
 
@@ -240,7 +240,16 @@ def runtime_projection_candidate_roots(
         configured = str(os.environ.get("LOOPX_RUNTIME_ROOT") or "").strip()
         if configured:
             roots.append(Path(configured).expanduser())
-        roots.append(select_default_runtime_root())
+        route = default_runtime_route()
+        if route["status"] == "invalid":
+            raise ValueError(str(route["recommended_action"]))
+        # Discovery is not implicit authority selection. An explicitly bound
+        # source remains usable when both default stores exist; inspect both
+        # registries and let the existing source_registry matching reject an
+        # ambiguous or missing mirror. Never choose one default or migrate it.
+        roots.append(Path(str(route["selected_runtime_root"])))
+        if route["status"] == "conflict":
+            roots.append(Path(str(route["legacy_runtime_root"])))
     else:
         roots.extend(Path(root).expanduser() for root in candidate_roots)
     roots.append(source_runtime_root.expanduser())
