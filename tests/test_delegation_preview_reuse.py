@@ -1,0 +1,282 @@
+"""Real original CLI comparisons; reusable processes must not reuse decisions."""
+import asyncio
+import json
+import subprocess
+import sys
+import time
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+from loopx.collaboration_mcp import _pinned_release_environment, _python_module_command
+from test_local_delegation import demo, service as delegation_service
+
+service = delegation_service
+
+
+def test_real_mcp_session_rereads_changed_validator_without_effects(service):
+    root, runner = service
+    before = runner.registry.read_bytes(), runner.config.read_bytes()
+    canonical = demo.canonical_tasks(root)
+    validator = Path(json.loads(before[0])["goals"][0]["repo"]) / "validation" / "acceptance.py"
+    original = validator.read_bytes()
+
+    async def inspect_session():
+        params = StdioServerParameters(command=sys.executable, args=[
+            "-m", "loopx.collaboration_mcp", "--registry", str(runner.registry),
+            "--runtime-root", str(runner.root), "--goal-id", runner.goal_id,
+            "--agent-id", runner.agent_id, "--workspace", str(root / "lead"),
+            "--execution-config", str(runner.config),
+        ])
+        results = []
+        async with stdio_client(params) as (reader, writer):
+            async with ClientSession(reader, writer) as session:
+                await session.initialize()
+                for drift in (False, True, False):
+                    validator.write_bytes(original + (b"\n# updated current validator\n" if drift else b""))
+                    inspected = await session.call_tool("inspect_execution_binding", {"binding_id": "analysis"})
+                    assert not inspected.isError
+                    result = json.loads(inspected.content[0].text)
+                    assert result["state"] == ("acceptance_unavailable" if drift else "runtime_unverified")
+                    assert not any(result["effects"].values())
+                    results.append(result)
+        assert results[0] == results[2]
+
+    try:
+        asyncio.run(inspect_session())
+    finally:
+        validator.write_bytes(original)
+    assert (runner.registry.read_bytes(), runner.config.read_bytes()) == before
+    assert demo.canonical_tasks(root) == canonical
+    assert not (root / "host-started").exists()
+    assert not list((root / "runtime" / "goals").glob("*/turns/*.json"))
+
+
+@pytest.mark.parametrize("arguments", [
+    ("turn", "run-once", "--execute"),
+    ("turn", "run-once", "--resume-turn-key", "existing"),
+    ("task-lease", "acquire"),
+])
+def test_execution_resume_and_mutations_keep_original_cli_transport(service, monkeypatch, arguments):
+    _, runner = service
+    binding = runner.binding("analysis", require_active=True)
+    calls = []
+
+    def cli_run(argv, **kwargs):
+        calls.append((argv, kwargs))
+        return SimpleNamespace(returncode=0, stdout='{"original_transport":true}', stderr="")
+
+    def wrong_transport(**kwargs):
+        pytest.fail("mutating request entered the preview worker")
+
+    monkeypatch.setattr("loopx.collaboration_mcp.subprocess.run", cli_run)
+    monkeypatch.setattr(runner._preview_transport, "preview", wrong_transport)
+    assert runner._cli(binding, *arguments) == {"original_transport": True}
+    assert len(calls) == 1 and calls[0][0][-len(arguments):] == list(arguments)
+    assert calls[0][1]["cwd"] == binding["workspace"]
+    assert runner._preview_transport._process is None
+
+
+def fresh_cli(runner, binding, *argv, timeout=60):
+    completed = subprocess.run(
+        [*_python_module_command("loopx.cli"), "--registry", str(runner.registry),
+         "--runtime-root", str(runner.root), "--format", "json", *argv],
+        cwd=binding["workspace"], env=_pinned_release_environment(), capture_output=True,
+        text=True, encoding="utf-8", timeout=timeout,
+    )
+    assert completed.returncode in (0, 1)
+    return json.loads(completed.stdout)
+
+
+def test_reused_preview_matches_fresh_cli_and_rereads_validator_and_goal(service, monkeypatch):
+    root, runner = service
+    reused = runner._cli
+    source = runner.registry.read_bytes(), runner.config.read_bytes()
+    validator = Path(json.loads(source[0])["goals"][0]["repo"]) / "validation" / "acceptance.py"
+    original = validator.read_bytes()
+    canonical = demo.canonical_tasks(root)
+    pids = set()
+    try:
+        for drift in (False, True, False):
+            validator.write_bytes(original + (b"\n# current drift\n" if drift else b""))
+            with monkeypatch.context() as patch:
+                patch.setattr(runner, "_cli", lambda *args, **kwargs: fresh_cli(runner, *args, **kwargs))
+                expected = runner.inspect("analysis")
+            observed = runner.inspect("analysis")
+            assert observed == expected
+            assert observed["state"] == ("acceptance_unavailable" if drift else "runtime_unverified")
+            pids.add(runner._preview_transport._process.pid)
+        assert len(pids) == 1, "unchanged code and workspace should reuse the supervisor"
+        workspace = Path(runner.binding("analysis", require_active=True)["workspace"])
+        unsafe = workspace / "unsafe-fixture.py"
+        unsafe.write_text("fixture = " + repr("tok" + "en=" + "abcdefghijklmnop1234"))
+        with monkeypatch.context() as patch:
+            patch.setattr(runner, "_cli", lambda *args, **kwargs: fresh_cli(runner, *args, **kwargs))
+            expected = runner.inspect("analysis")
+        assert runner.inspect("analysis") == expected
+        assert expected["state"] == "turn_blocked"
+        unsafe.unlink()
+        assert runner.inspect("analysis")["state"] == "runtime_unverified"
+        assert demo.canonical_tasks(root) == canonical
+        assert (runner.registry.read_bytes(), runner.config.read_bytes()) == source
+        assert not (root / "host-started").exists()
+        assert not list((root / "runtime" / "goals").glob("*/turns/*.json"))
+        assert not list(runner.path("inventory").parent.glob("*.json"))
+    finally:
+        runner._preview_transport.close()
+    assert runner._cli == reused
+
+
+def test_code_invalidation_retires_worker_without_reusing_authority(service, monkeypatch):
+    from loopx.control_plane.collaboration import delegation_preview_transport as transport
+
+    _, runner = service
+    original = transport._source_snapshot
+    generation = 0
+    monkeypatch.setattr(transport, "_source_snapshot", lambda release: (*original(release), generation))
+    try:
+        first = runner.inspect("analysis")
+        process = runner._preview_transport._process
+        generation += 1
+        second = runner.inspect("analysis")
+        assert first == second
+        assert process.poll() == 0
+        assert runner._preview_transport._process.pid != process.pid
+    finally:
+        runner._preview_transport.close()
+
+
+def test_real_source_edit_reloads_python_module_and_environment(tmp_path):
+    from loopx.control_plane.collaboration.delegation_preview_transport import DelegationPreviewTransport
+
+    package = tmp_path / "loopx"
+    package.mkdir()
+    module = package / "owned_fixture.py"
+    module.write_text("VALUE = 'old'\n")
+    worker = tmp_path / "fixture_worker.py"
+    worker.write_text(
+        "import sys,json,os\n"
+        f"sys.path.insert(0,{str(package)!r})\n"
+        "import owned_fixture\n"
+        "for line in sys.stdin:\n"
+        " r=json.loads(line)\n"
+        " print(json.dumps({'kind':'preview','id':r['id'],'returncode':0,"
+        "'value':{'module':owned_fixture.VALUE,'env':os.environ['LOOPX_PREVIEW_FIXTURE']}}),flush=True)\n"
+    )
+    transport = DelegationPreviewTransport()
+    environment = {**_pinned_release_environment(), "LOOPX_PREVIEW_FIXTURE": "before"}
+
+    def read():
+        return transport.preview(command=[sys.executable, "-P", str(worker)], workspace=tmp_path,
+            release=tmp_path, environment=environment, registry=tmp_path / "registry.json",
+            runtime_root=tmp_path / "runtime", goal_id="goal", agent_id="agent", todo_id="todo",
+            argv=("fixture",), timeout=5)
+
+    try:
+        assert read() == {"module": "old", "env": "before"}
+        first = transport._process
+        module.write_text("VALUE = 'updated'\n")
+        assert read() == {"module": "updated", "env": "before"}
+        assert first.poll() == 0
+        second = transport._process
+        environment["LOOPX_PREVIEW_FIXTURE"] = "after"
+        assert read() == {"module": "updated", "env": "after"}
+        assert second.poll() == 0
+    finally:
+        transport.close()
+
+
+def test_concurrent_services_preserve_registry_runtime_and_workspace_partition(service, tmp_path, request, monkeypatch):
+    root, first = service
+    second_root, second = delegation_service.__wrapped__(
+        tmp_path / "second", SimpleNamespace(param=request.node.callspec.params["service"]), monkeypatch
+    )
+    expected = [runner.inspect("analysis") for runner in (first, second)]
+    before = [demo.canonical_tasks(candidate) for candidate in (root, second_root)]
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(lambda runner: runner.inspect("analysis"), (first, second)))
+        assert results == expected
+        assert first._preview_transport._process.pid != second._preview_transport._process.pid
+        assert [demo.canonical_tasks(candidate) for candidate in (root, second_root)] == before
+    finally:
+        first._preview_transport.close()
+        second._preview_transport.close()
+
+
+def test_source_change_during_preview_rejects_result_and_releases_worker(service, monkeypatch):
+    from loopx.control_plane.collaboration import delegation_preview_transport as transport
+
+    _, runner = service
+    original = transport._source_snapshot
+    calls = 0
+
+    def changed(release):
+        nonlocal calls
+        calls += 1
+        return (*original(release), calls)
+
+    monkeypatch.setattr(transport, "_source_snapshot", changed)
+    with pytest.raises(ValueError, match="source changed"):
+        runner.inspect("analysis")
+    assert runner._preview_transport._process is None
+
+
+def test_preview_worker_rejects_execute_abbreviation_and_retargeting(service):
+    _, runner = service
+    binding = runner.binding("analysis", require_active=True)
+    arguments = ("turn", "run-once", "--goal-id", runner.goal_id, "--agent-id", binding["agent_id"],
+                 "--todo-id", binding["todo_id"], "--turn-instance-id", "readonly-worker",
+                 *runner._execution_arguments(binding, "readonly-worker"))
+    for extra in (("--exec",), ("--todo-id", "other"), ("--resume-turn-key", "other")):
+        with pytest.raises(ValueError):
+            # Explicit resume retains the old CLI. Test the narrow worker itself
+            # to prove it cannot mutate even if an IO caller misroutes a frame.
+            runner._preview_transport.preview(
+                command=_python_module_command("loopx.control_plane.collaboration.delegation_preview_worker"),
+                workspace=Path(binding["workspace"]), release=Path(__file__).resolve().parents[1],
+                environment=_pinned_release_environment(), registry=runner.registry,
+                runtime_root=runner.root, goal_id=runner.goal_id, agent_id=binding["agent_id"],
+                todo_id=binding["todo_id"], argv=(*arguments, *extra), timeout=10,
+            )
+        assert runner._preview_transport._process is None
+    assert not any(runner.inspect("analysis")["effects"].values())
+    runner._preview_transport.close()
+
+
+def test_preview_timeout_releases_transport_and_allows_fresh_inspection(service):
+    _, runner = service
+    binding = runner.binding("analysis", require_active=True)
+    started = time.monotonic()
+    with pytest.raises(subprocess.TimeoutExpired):
+        runner._cli(binding, "turn", "run-once", "--goal-id", runner.goal_id,
+                    "--agent-id", binding["agent_id"], "--todo-id", binding["todo_id"],
+                    "--turn-instance-id", "deadline", *runner._execution_arguments(binding, "deadline"), timeout=0.001)
+    assert time.monotonic() - started < 5
+    assert runner._preview_transport._process is None
+    assert runner.inspect("analysis")["state"] == "runtime_unverified"
+    runner._preview_transport.close()
+
+
+def test_partial_supervisor_frame_obeys_parent_deadline_and_eof_cleanup():
+    from loopx.control_plane.collaboration.delegation_preview_transport import DelegationPreviewTransport
+
+    transport = DelegationPreviewTransport()
+    # Isolate the pipe boundary: the supervisor emits an incomplete handshake
+    # and waits for EOF. Reading a partial line must still honor the deadline.
+    process = subprocess.Popen([sys.executable, "-c",
+        "import sys;sys.stdout.write('{');sys.stdout.flush();sys.stdin.read()"],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+    transport._process = process
+    started = time.monotonic()
+    try:
+        with pytest.raises(subprocess.TimeoutExpired):
+            transport._read(started + 0.1, 0.1)
+    finally:
+        transport.close()
+    assert time.monotonic() - started < 2
+    assert process.poll() == 0

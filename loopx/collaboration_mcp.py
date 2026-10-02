@@ -369,6 +369,9 @@ class Delegations:
         self.root, self.registry = root.resolve(), registry.resolve()
         self.goal_id, self.agent_id, self.config = goal_id, agent_id, config.resolve()
         self._goal_ref_lock = Lock()
+        from .control_plane.collaboration.delegation_preview_transport import DelegationPreviewTransport
+
+        self._preview_transport = DelegationPreviewTransport()
         try:
             self.goal_ref = capture_collaboration_goal_ref(
                 self.registry,
@@ -794,6 +797,21 @@ class Delegations:
             return None
 
     def _cli(self, binding: dict, *args: str, timeout: int = 60) -> dict:
+        if args[:2] == ("turn", "run-once") and not any(
+            flag in args for flag in ("--execute", "--resume-turn-key")
+        ):
+            # Inspection already fences selectors using the original parser;
+            # the worker independently rejects execution/resume/retargeting.
+            # Mutating commands keep their original fresh CLI transport.
+            return self._preview_transport.preview(
+                command=_python_module_command(
+                    "loopx.control_plane.collaboration.delegation_preview_worker"
+                ), workspace=Path(binding["workspace"]), release=_release_root(),
+                environment=_pinned_release_environment(), registry=self.registry,
+                runtime_root=self.root, goal_id=self.goal_id,
+                agent_id=binding["agent_id"], todo_id=binding["todo_id"],
+                argv=args, timeout=timeout,
+            )
         completed = subprocess.run([*_python_module_command("loopx.cli"),
             "--registry", str(self.registry),
             "--runtime-root", str(self.root), "--format", "json", *args,

@@ -174,6 +174,37 @@ reporting `turn_blocked`. The observation starts no host, Turn journal or quota 
 Normal quota selection may still admit unrelated eligible work; this preflight
 never substitutes another Todo.
 
+Repeated inspections in one long-lived `Delegations` service reuse at most one
+fixed-workspace, read-only Python CLI worker. The existing TypeScript Host owner
+supervises that worker: each preview retains its 60-second request deadline;
+timeout, cancellation, malformed output and parent EOF stop its process group
+before a verifiable failure is returned. If cleanup cannot be established, the
+transport fails closed without a preview or an automatic fallback/retry.
+POSIX cleanup is process-group scoped; Windows retains the Host owner's
+best-effort process-tree cleanup boundary.
+
+Only loaded modules are reused. Registry/runtime/binding and workspace identity,
+interpreter, environment or packaged-source changes retire the worker. Every
+request still runs the original CLI decision owner and current acceptance,
+validator and workspace reads; no eligibility, authority or result is cached.
+The session is single-flight and bounded to 128 requests, 30 seconds idle and
+five minutes total. Execution and resume keep their original one-shot CLI path.
+This is an internal transport change, not a new capability setting, execution
+grant or UI source of truth. A one-shot CLI inspection still pays cold startup;
+a warm-service measurement is not evidence of a faster cold CLI.
+
+中文：长驻 `Delegations` 服务的连续预检最多复用一个固定工作区的只读 Python CLI
+进程；既有 TS Host owner 负责生命周期。单次预检仍有 60 秒截止时间，超时、取消、
+非法输出或父端 EOF 后，先确认进程组停止，再返回可核验失败；若无法确认清理，
+不给预检结果，也不自动回退或重试。POSIX 按进程组清理，Windows 保留既有的
+best-effort 进程树边界。
+
+只复用已加载模块，不缓存准入、权限或结果。registry/runtime/binding、工作区身份、
+解释器、环境或包内源码变化时，先退役旧进程；每次仍执行原 CLI 决策 owner，重读
+当前验收、validator 和工作区。单个 session 串行处理，最多 128 次请求、空闲 30 秒、
+总寿命 5 分钟；执行和恢复沿用一次性 CLI。这不增加配置、授权或 UI 权威。
+一次性 CLI 仍承担冷启动，热服务的加速不能冒充冷 CLI 的加速。
+
 中文：预检以 binding 固定的真实 worker 工作树作为安全扫描根。quota 因控制面
 修复延后该精确 Todo 时，返回 `state: turn_blocked`、原选路状态、
 `turn_blocker.reason_code` 和契约错误数；规范验收可能仍已就绪。
