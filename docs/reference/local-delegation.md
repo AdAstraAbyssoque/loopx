@@ -188,7 +188,10 @@ interpreter, environment or packaged-source changes retire the worker. Every
 request still runs the original CLI decision owner and current acceptance,
 validator and workspace reads; no eligibility, authority or result is cached.
 The session is single-flight and bounded to 128 requests, 30 seconds idle and
-five minutes total. Execution and resume keep their original one-shot CLI path.
+five minutes total. Execution and resume keep their original one-shot CLI path,
+including the existing leased Host supervisor's current-execution readback,
+renewal and nested-process cleanup. Lease-bearing commands never enter the
+preview worker; preview reuse grants no lease or execution authority.
 This is an internal transport change, not a new capability setting, execution
 grant or UI source of truth. A one-shot CLI inspection still pays cold startup;
 a warm-service measurement is not evidence of a faster cold CLI.
@@ -202,7 +205,9 @@ best-effort 进程树边界。
 只复用已加载模块，不缓存准入、权限或结果。registry/runtime/binding、工作区身份、
 解释器、环境或包内源码变化时，先退役旧进程；每次仍执行原 CLI 决策 owner，重读
 当前验收、validator 和工作区。单个 session 串行处理，最多 128 次请求、空闲 30 秒、
-总寿命 5 分钟；执行和恢复沿用一次性 CLI。这不增加配置、授权或 UI 权威。
+总寿命 5 分钟；执行和恢复沿用一次性 CLI，包括既有租约 Host 的当前执行读回、
+续期和嵌套进程清理。带租约的命令不进入预检 worker，预检复用不授予租约或执行
+权限。这不增加配置、授权或 UI 权威。
 一次性 CLI 仍承担冷启动，热服务的加速不能冒充冷 CLI 的加速。
 
 中文：预检以 binding 固定的真实 worker 工作树作为安全扫描根。quota 因控制面
