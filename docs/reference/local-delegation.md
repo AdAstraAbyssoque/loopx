@@ -210,6 +210,67 @@ best-effort 进程树边界。
 权限。这不增加配置、授权或 UI 权威。
 一次性 CLI 仍承担冷启动，热服务的加速不能冒充冷 CLI 的加速。
 
+### Preview performance qualification / 预检性能验收
+
+Qualify the useful caller path, not the total duration of a pytest suite. A
+functional suite's execution timeout bounds a stuck test runner; it is not a
+request-latency SLO. Revising a frozen timeout creates a new qualification with
+the old declaration/result retained, never a retroactive pass. For this bounded
+continuous-service slice, use the following calibration profile:
+
+- Run the original preflight suite without dropping cases in a separate
+  qualification stage. A 600-second runner timeout allows real subprocess/
+  backend setup; it does not change the existing
+  60-second preview deadline. Lease lifetime, cancellation, EOF and descendant
+  cleanup regressions remain required separately, as do current validator and
+  workspace drift checks. Passing the timing profile cannot waive these checks.
+  The bounded inline completion validator checks the retained qualification's
+  source, complete results and criteria; it does not rerun the full suite inside
+  an authority transaction or raise that transaction's timeout. Missing or stale
+  evidence refuses completion.
+- Freeze source/interpreter, fixture population, runtime configuration and
+  measurement boundaries before sampling. Compare production-wired reuse with
+  the original fresh-subprocess policy at the same revision, separately for
+  File and SQLite. Use at least six alternating pairs, each with one cold and
+  three warm inspections; isolate runtime processes and retain every sample.
+  Stop the caller's own heavy tests while measuring; disclose shared-host load.
+- Require identical complete unnormalized results and unchanged canonical
+  fixture bytes. Re-read current authority on every inspection; no cached
+  verdict, truncated input, skipped validator or repeated write is admissible.
+- Require each provider's warm median to improve by at least 25%, and the
+  median total of a four-inspection sequence, including its cold request, to
+  improve by at least 15%. These are minimum useful savings, not thresholds
+  fitted to one sample or a promise about a single-use CLI.
+- Permit at most one second of additional cold median and cold maximum versus
+  the paired fresh policy, with no request deadline violation. This explicitly
+  accepts a bounded startup cost only when the sequence still saves time; report
+  cold median/max and the break-even sequence alongside the warm result. A
+  consumer that only inspects once must be assessed as a cold consumer.
+
+These small-sample median/max checks qualify this transport-policy slice only;
+they establish neither a percentile SLO nor sustained R2, model, installation,
+frontend/Lark or requester-adoption acceptance. A changed workload or source
+needs new qualification. Failure retains the samples and keeps the affected
+acceptance open; do not increase thresholds or sample until a pass appears.
+
+中文：验收有用的调用路径，不再把整套 pytest 总时长当单次请求 SLO。测试执行
+超时仅防挂死；调整已冻结超时属于新一轮验收，保留旧声明与旧失败，不追溯改判。
+本次持续服务切片按以下校准标准验证：原预检套件不删案例，在独立阶段执行，
+runner 超时为 600 秒，
+真实请求的 60 秒截止时间不改；租约生命周期、取消、EOF、子孙进程清理以及当前
+validator／工作区漂移另行必验。内联完成校验只核对对应源码、完整结果及标准，
+不在权威事务内重跑全套或延长事务超时；证据缺失、过期仍拒绝。冻结源码、解释器、
+完整 fixture 与运行配置，
+File／SQLite 分别在同一版本比较真实复用路径和原 fresh 策略；至少六组交替配对，
+每组一冷三热，隔离 runtime、保留全部样本，停止自己的重测试并披露宿主负载。
+完整未改写结果相同、canonical 字节不变，每次仍读当前权限，不能用判决缓存过关。
+每个 provider 热调用中位数至少改善 25%，含冷启动的四次调用总时长中位数至少
+改善 15%；这是最低有用收益，不是对独立 CLI 的承诺。冷启动中位数及最大值最多
+各增加一秒且不违反请求期限；以有界的一次性成本换取整个序列的净收益，同时
+披露冷读与回本调用数。仅调用一次的消费者按冷路径评估。这不认证百分位 SLO、
+R2 持续运行、模型、安装、前端／Lark 或真实请求方采用；变更负载或源码重新验证，
+失败保留样本，不边采边抬线或反复采样挑通过。
+
 中文：预检以 binding 固定的真实 worker 工作树作为安全扫描根。quota 因控制面
 修复延后该精确 Todo 时，返回 `state: turn_blocked`、原选路状态、
 `turn_blocker.reason_code` 和契约错误数；规范验收可能仍已就绪。

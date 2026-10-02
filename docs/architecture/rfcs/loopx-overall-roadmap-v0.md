@@ -648,8 +648,12 @@ pays cold startup, and the bridge adds a cold cost. The PR records exact-head
 parity, real MCP, cancellation and paired timing evidence separately. Discovering
 projection candidates does not select a machine default: two existing stores
 are checked against their declared source registry, and multiple matching mirrors
-remain ambiguous. No machine state is migrated. The original whole-suite budget,
-real caller adoption and sustained R2 acceptance remain open; no installation,
+remain ambiguous. No machine state is migrated. The historical whole-suite budget
+failure is retained. The current bounded slice uses the
+[caller-path qualification](../../reference/local-delegation.md#preview-performance-qualification--预检性能验收):
+separate functional-runner timeouts from warm/sequence savings and bounded cold
+startup cost. Revised criteria require fresh qualification, not a relabeled old
+pass. Real caller adoption and sustained R2 acceptance remain open; no installation,
 G1/G3 promotion or end-to-end financial-loop completion is claimed.
 中文：2026-10-02 草稿检查点，#5283 已实现由现有 TS Host 进程监督器管理的私有
 只读预检进程复用。固定 Python worker 只是 IO 适配器，每次重新进入原 CLI/Turn
@@ -658,8 +662,10 @@ Agent/Todo 分区、源码和环境失效、启动及请求期限、输出上限
 本切片；执行、恢复和写入保留原传输。目标是持续 MCP/HTTP 服务的热预检，独立 CLI
 仍支付冷启动，桥接还会增加冷成本。确切头上的结果等价、真实 MCP、取消与配对
 计时分别记录在 PR。投影候选发现不选择机器默认源：两个现有目录按声明的源注册表
-核对，多重匹配仍判歧义，不迁移机器状态。原全套预算、真实调用方采用和 R2 持续
-运行验收仍开放；不声称安装、G1/G3 晋级或金融最小闭环完成。
+核对，多重匹配仍判歧义，不迁移机器状态。旧全套预算失败保留；当前有界切片按
+上述调用路径标准，分开功能 runner 超时、热调用／含冷启动序列的净节省及有界
+冷启动成本。新标准须重新验证，不改判旧结果；真实调用方采用和 R2 持续运行
+验收仍开放，不声称安装、G1/G3 晋级或金融最小闭环完成。
 
 The same owner-local panel now opens current validated artifact text and its
 version/source identifiers, accepts feedback through the original coordinator
